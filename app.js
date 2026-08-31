@@ -10,7 +10,7 @@
 ========================================================= */
 
 const API_URL =
-    "https://apollomusic.onrender.com";
+    "https://apollobackend-viu3.onrender.com";
 
 const YOUTUBE_API_TIMEOUT = 15000;
 const SPLASH_SPEED = 0.6;
