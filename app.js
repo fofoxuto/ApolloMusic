@@ -25,6 +25,7 @@ let currentTrack = 0;
 
 let youtubePlayer = null;
 let youtubeApiReady = false;
+let youtubeApiPromise = null;
 
 let progressTimer = null;
 let changingTrack = false;
@@ -93,7 +94,9 @@ function cacheElements() {
 function setStatus(text) {
 
     if (elements.status) {
-        elements.status.textContent = text;
+
+        elements.status.textContent =
+            text;
     }
 }
 
@@ -133,6 +136,7 @@ function formatTime(seconds) {
         Math.floor(
             seconds / 60
         );
+
 
     const remaining =
         Math.floor(
@@ -222,7 +226,7 @@ async function showSplashScreen() {
 
 
 /* =========================================================
-   API
+   API BACKEND
 ========================================================= */
 
 async function api(
@@ -334,77 +338,137 @@ async function checkAPI() {
 
 function loadYouTubeAPI() {
 
-    return new Promise(resolve => {
+    /*
+     * Se já carregou, não precisamos
+     * fazer absolutamente nada.
+     */
 
-        if (
-            window.YT &&
-            window.YT.Player
-        ) {
+    if (
+        window.YT &&
+        window.YT.Player
+    ) {
 
-            youtubeApiReady = true;
+        youtubeApiReady =
+            true;
 
-            resolve();
-
-            return;
-        }
-
-
-        const previousCallback =
-            window.onYouTubeIframeAPIReady;
+        return Promise.resolve();
+    }
 
 
-        window.onYouTubeIframeAPIReady =
-            () => {
+    /*
+     * Evita carregar a API duas vezes
+     * caso init() seja chamado novamente.
+     */
 
-                youtubeApiReady = true;
+    if (youtubeApiPromise) {
+
+        return youtubeApiPromise;
+    }
 
 
-                if (
-                    typeof previousCallback ===
-                    "function"
-                ) {
+    youtubeApiPromise =
+        new Promise(
+            (resolve, reject) => {
 
-                    previousCallback();
+                /*
+                 * Guarda callback anterior,
+                 * caso alguma outra parte da
+                 * página tenha definido um.
+                 */
+
+                const previousCallback =
+                    window.onYouTubeIframeAPIReady;
+
+
+                window.onYouTubeIframeAPIReady =
+                    () => {
+
+                        youtubeApiReady =
+                            true;
+
+
+                        if (
+                            typeof previousCallback ===
+                            "function"
+                        ) {
+
+                            try {
+
+                                previousCallback();
+
+                            } catch (error) {
+
+                                console.warn(
+                                    "[ApolloMusic] Callback anterior:",
+                                    error
+                                );
+                            }
+                        }
+
+
+                        resolve();
+                    };
+
+
+                /*
+                 * Se o script já existe,
+                 * apenas esperamos o callback.
+                 */
+
+                const existingScript =
+                    document.querySelector(
+                        'script[src="https://www.youtube.com/iframe_api"]'
+                    );
+
+
+                if (existingScript) {
+
+                    return;
                 }
 
 
-                resolve();
-            };
+                const script =
+                    document.createElement(
+                        "script"
+                    );
 
 
-        const existing =
-            document.querySelector(
-                'script[src="https://www.youtube.com/iframe_api"]'
-            );
+                script.src =
+                    "https://www.youtube.com/iframe_api";
 
 
-        if (existing) {
-            return;
-        }
+                script.async =
+                    true;
 
 
-        const script =
-            document.createElement(
-                "script"
-            );
+                script.onerror =
+                    () => {
+
+                        youtubeApiPromise =
+                            null;
 
 
-        script.src =
-            "https://www.youtube.com/iframe_api";
+                        reject(
+                            new Error(
+                                "Não foi possível carregar a YouTube IFrame API."
+                            )
+                        );
+                    };
 
 
-        script.async = true;
-
-
-        document.head.appendChild(
-            script
+                document.head.appendChild(
+                    script
+                );
+            }
         );
-    });
+
+
+    return youtubeApiPromise;
 }
 
 
 /* =========================================================
-   CRIA PLAYER
+   CRIA / RECRIA PLAYER
 ========================================================= */
 
 async function createYouTubePlayer(
@@ -415,17 +479,62 @@ async function createYouTubePlayer(
     await loadYouTubeAPI();
 
 
+    if (
+        !youtubeApiReady ||
+        !window.YT ||
+        !window.YT.Player
+    ) {
+
+        throw new Error(
+            "YouTube IFrame API não está disponível."
+        );
+    }
+
+
     const container =
         elements.youtubeContainer;
 
 
     if (!container) {
-        return;
+
+        throw new Error(
+            "Container do YouTube não encontrado."
+        );
     }
 
 
-    container.innerHTML = "";
+    /*
+     * Remove player antigo.
+     */
 
+    if (youtubePlayer) {
+
+        try {
+
+            youtubePlayer.destroy();
+
+        } catch (error) {
+
+            console.warn(
+                "[ApolloMusic] Destroy player:",
+                error
+            );
+        }
+
+
+        youtubePlayer =
+            null;
+    }
+
+
+    container.innerHTML =
+        "";
+
+
+    /*
+     * A API transforma este elemento
+     * no iframe do YouTube.
+     */
 
     const playerElement =
         document.createElement(
@@ -442,103 +551,181 @@ async function createYouTubePlayer(
     );
 
 
-    return new Promise(resolve => {
+    return new Promise(
+        (resolve, reject) => {
 
-        const options = {
-
-            width: "100%",
-
-            height: "400",
-
-            playerVars: {
-
-                autoplay: 1,
-
-                controls: 1,
-
-                rel: 0,
-
-                modestbranding: 1,
-
-                playsinline: 1,
-
-                enablejsapi: 1
-            },
+            let resolved =
+                false;
 
 
-            events: {
+            const options = {
 
-                onReady: event => {
+                width:
+                    "100%",
 
-                    youtubePlayer =
-                        event.target;
+                height:
+                    "400",
 
+                playerVars: {
 
-                    updateControls();
+                    autoplay:
+                        1,
 
-                    updateProgress();
+                    controls:
+                        1,
 
-                    resolve(
-                        youtubePlayer
-                    );
+                    rel:
+                        0,
+
+                    modestbranding:
+                        1,
+
+                    playsinline:
+                        1,
+
+                    enablejsapi:
+                        1
                 },
 
 
-                onStateChange:
-                    handlePlayerStateChange,
+                events: {
+
+                    /* -------------------------------------
+                       PLAYER PRONTO
+                    ------------------------------------- */
+
+                    onReady:
+                        event => {
+
+                            youtubePlayer =
+                                event.target;
 
 
-                onError:
-                    handleYouTubeError
-            }
-        };
+                            /*
+                             * Se for playlist,
+                             * carregamos SOMENTE agora,
+                             * quando o player já está pronto.
+                             */
+
+                            if (
+                                playlistId
+                            ) {
+
+                                youtubePlayer.loadPlaylist({
+
+                                    list:
+                                        playlistId,
+
+                                    listType:
+                                        "playlist",
+
+                                    index:
+                                        0
+                                });
+
+                                setStatus(
+                                    "Playlist carregada."
+                                );
+
+                            } else if (
+                                videoId
+                            ) {
+
+                                setStatus(
+                                    "Vídeo carregado."
+                                );
+                            }
 
 
-        if (videoId) {
+                            updateControls();
 
-            options.videoId =
-                videoId;
-
-        }
+                            updateProgress();
 
 
-        youtubePlayer =
-            new YT.Player(
-                "youtube-player",
-                options
-            );
+                            if (!resolved) {
+
+                                resolved =
+                                    true;
+
+                                resolve(
+                                    youtubePlayer
+                                );
+                            }
+                        },
 
 
-        if (
-            playlistId
-        ) {
+                    /* -------------------------------------
+                       ESTADO
+                    ------------------------------------- */
 
-            setTimeout(() => {
+                    onStateChange:
+                        handlePlayerStateChange,
 
-                if (
-                    youtubePlayer &&
-                    typeof youtubePlayer.loadPlaylist ===
-                    "function"
-                ) {
 
-                    youtubePlayer.loadPlaylist({
-                        list:
-                            playlistId,
-                        listType:
-                            "playlist",
-                        index: 0
-                    });
+                    /* -------------------------------------
+                       ERROS
+                    ------------------------------------- */
+
+                    onError:
+                        event => {
+
+                            handleYouTubeError(
+                                event
+                            );
+
+
+                            /*
+                             * Não rejeitamos a Promise
+                             * aqui porque o player pode continuar
+                             * existindo após determinados erros.
+                             */
+
+                            if (!resolved) {
+
+                                resolved =
+                                    true;
+
+                                reject(
+                                    new Error(
+                                        "Erro ao inicializar o player do YouTube."
+                                    )
+                                );
+                            }
+                        }
                 }
+            };
 
-            }, 300);
+
+            /*
+             * Vídeo individual.
+             *
+             * Para playlist NÃO passamos videoId,
+             * porque o loadPlaylist() será responsável
+             * por iniciar a playlist.
+             */
+
+            if (
+                videoId &&
+                !playlistId
+            ) {
+
+                options.videoId =
+                    videoId;
+            }
+
+
+            youtubePlayer =
+                new YT.Player(
+                    "youtube-player",
+                    options
+                );
         }
-
-    });
+    );
 }
 
 
 /* =========================================================
-   PLAYER STATE
+   ESTADO DO PLAYER
 ========================================================= */
 
 function handlePlayerStateChange(
@@ -554,7 +741,8 @@ function handlePlayerStateChange(
 
         case YT.PlayerState.PLAYING:
 
-            autoplayBlocked = false;
+            autoplayBlocked =
+                false;
 
             startProgressTimer();
 
@@ -617,7 +805,7 @@ function handlePlayerStateChange(
 
 
 /* =========================================================
-   ERROS YOUTUBE
+   ERROS DO YOUTUBE
 ========================================================= */
 
 function handleYouTubeError(
@@ -625,7 +813,7 @@ function handleYouTubeError(
 ) {
 
     console.error(
-        "[ApolloMusic] YouTube:",
+        "[ApolloMusic] YouTube error:",
         event.data
     );
 
@@ -655,10 +843,62 @@ function handleYouTubeError(
     );
 
 
-    setTimeout(
-        () => nextTrack(),
-        900
-    );
+    /*
+     * Não pulamos automaticamente quando
+     * o erro acontece dentro de uma playlist.
+     *
+     * Primeiro deixamos o próprio YouTube
+     * decidir o próximo item.
+     */
+
+    const current =
+        queue[currentTrack];
+
+
+    if (
+        current?.playlistId
+    ) {
+
+        return;
+    }
+
+
+    if (
+        queue.length > 1
+    ) {
+
+        setTimeout(
+            () => nextTrack(),
+            900
+        );
+    }
+}
+
+
+/* =========================================================
+   EXTRAI ID DE PLAYLIST
+========================================================= */
+
+function extractPlaylistId(
+    url
+) {
+
+    try {
+
+        const parsed =
+            new URL(url);
+
+
+        return (
+            parsed.searchParams.get(
+                "list"
+            ) || null
+        );
+
+    } catch {
+
+        return null;
+    }
 }
 
 
@@ -711,7 +951,8 @@ async function processYouTubeUrl(
             await api(
                 "/api/youtube/process",
                 {
-                    method: "POST",
+                    method:
+                        "POST",
 
                     body:
                         JSON.stringify({
@@ -738,8 +979,18 @@ async function processYouTubeUrl(
 
 
         /*
-         * Adiciona à fila em vez de substituir
-         * automaticamente tudo.
+         * Se o backend não retornar playlistId,
+         * tentamos descobrir pelo próprio link.
+         */
+
+        const playlistId =
+            response.playlistId ||
+            extractPlaylistId(url);
+
+
+        /*
+         * Se existe playlistId,
+         * tratamos como playlist.
          */
 
         const item = {
@@ -747,16 +998,23 @@ async function processYouTubeUrl(
             url,
 
             videoId:
-                response.videoId ||
-                null,
+                playlistId
+                    ? null
+                    : (
+                        response.videoId ||
+                        null
+                    ),
 
             playlistId:
-                response.playlistId ||
-                null,
+                playlistId,
 
             title:
                 response.title ||
-                "Vídeo do YouTube",
+                (
+                    playlistId
+                        ? "Playlist do YouTube"
+                        : "Vídeo do YouTube"
+                ),
 
             thumbnail:
                 response.thumbnail ||
@@ -781,13 +1039,14 @@ async function processYouTubeUrl(
 
 
         /*
-         * Se for o primeiro item,
-         * começa automaticamente.
+         * Primeiro item:
+         * abre o player.
          */
 
         if (wasEmpty) {
 
-            currentTrack = 0;
+            currentTrack =
+                0;
 
             await playCurrentTrack();
 
@@ -799,11 +1058,9 @@ async function processYouTubeUrl(
         }
 
 
-        /*
-         * Limpa o campo depois de adicionar.
-         */
-
-        if (elements.youtubeSearch) {
+        if (
+            elements.youtubeSearch
+        ) {
 
             elements.youtubeSearch.value =
                 "";
@@ -858,20 +1115,35 @@ async function playCurrentTrack() {
 
     updateQueueSelection();
 
-    setStatus(
-        "Carregando vídeo..."
-    );
+
+    if (
+        track.playlistId
+    ) {
+
+        setStatus(
+            "Carregando playlist..."
+        );
+
+    } else {
+
+        setStatus(
+            "Carregando vídeo..."
+        );
+    }
 
 
     try {
 
+        /*
+         * Playlist:
+         *
+         * O YouTube IFrame API será responsável
+         * pela reprodução dos vídeos da playlist.
+         */
+
         if (
             track.playlistId
         ) {
-
-            /*
-             * Playlist do YouTube.
-             */
 
             await createYouTubePlayer(
                 null,
@@ -879,10 +1151,6 @@ async function playCurrentTrack() {
             );
 
         } else {
-
-            /*
-             * Vídeo individual.
-             */
 
             await createYouTubePlayer(
                 track.videoId,
@@ -895,7 +1163,6 @@ async function playCurrentTrack() {
 
         updateControls();
 
-
     } catch (error) {
 
         console.error(
@@ -905,6 +1172,7 @@ async function playCurrentTrack() {
 
 
         setStatus(
+            error.message ||
             "Não foi possível carregar o player."
         );
 
@@ -968,14 +1236,15 @@ function nextTrack() {
     }
 
 
-    /*
-     * Se o item atual é uma playlist,
-     * o próprio YouTube controla seus vídeos.
-     */
-
     const current =
         queue[currentTrack];
 
+
+    /*
+     * Se o item atual for uma playlist,
+     * o próprio YouTube controla os vídeos
+     * internos dela.
+     */
 
     if (
         current?.playlistId &&
@@ -990,6 +1259,10 @@ function nextTrack() {
     }
 
 
+    /*
+     * Queue normal do ApolloMusic.
+     */
+
     if (
         currentTrack <
         queue.length - 1
@@ -999,11 +1272,8 @@ function nextTrack() {
 
     } else {
 
-        /*
-         * Volta para o primeiro.
-         */
-
-        currentTrack = 0;
+        currentTrack =
+            0;
     }
 
 
@@ -1026,6 +1296,11 @@ function previousTrack() {
         queue[currentTrack];
 
 
+    /*
+     * Playlist do YouTube:
+     * deixa a API controlar o anterior.
+     */
+
     if (
         current?.playlistId &&
         youtubePlayer &&
@@ -1038,6 +1313,10 @@ function previousTrack() {
         return;
     }
 
+
+    /*
+     * Queue normal.
+     */
 
     if (
         currentTrack >
@@ -1067,14 +1346,17 @@ function handleTrackEnded() {
         queue[currentTrack];
 
 
+    /*
+     * Se for playlist, não avançamos
+     * manualmente.
+     *
+     * O YouTube IFrame API controla
+     * a sequência interna da playlist.
+     */
+
     if (
         current?.playlistId
     ) {
-
-        /*
-         * O YouTube normalmente
-         * administra o fim da playlist.
-         */
 
         return;
     }
@@ -1117,21 +1399,27 @@ function stopProgressTimer() {
 
 function resetProgress() {
 
-    if (elements.progressBar) {
+    if (
+        elements.progressBar
+    ) {
 
         elements.progressBar.value =
             0;
     }
 
 
-    if (elements.currentTime) {
+    if (
+        elements.currentTime
+    ) {
 
         elements.currentTime.textContent =
             "0:00";
     }
 
 
-    if (elements.duration) {
+    if (
+        elements.duration
+    ) {
 
         elements.duration.textContent =
             "0:00";
@@ -1151,8 +1439,11 @@ function updateProgress() {
     }
 
 
-    let current = 0;
-    let duration = 0;
+    let current =
+        0;
+
+    let duration =
+        0;
 
 
     try {
@@ -1166,6 +1457,7 @@ function updateProgress() {
             0;
 
     } catch {
+
         return;
     }
 
@@ -1175,7 +1467,9 @@ function updateProgress() {
     ) {
 
         elements.currentTime.textContent =
-            formatTime(current);
+            formatTime(
+                current
+            );
     }
 
 
@@ -1184,7 +1478,9 @@ function updateProgress() {
     ) {
 
         elements.duration.textContent =
-            formatTime(duration);
+            formatTime(
+                duration
+            );
     }
 
 
@@ -1245,7 +1541,7 @@ function seekVideo(
 
 
 /* =========================================================
-   BOTÃO PLAY
+   PLAY BUTTON
 ========================================================= */
 
 function updatePlayButton(
@@ -1286,21 +1582,27 @@ function updateControls() {
         queue.length > 0;
 
 
-    if (elements.play) {
+    if (
+        elements.play
+    ) {
 
         elements.play.disabled =
             !hasQueue;
     }
 
 
-    if (elements.next) {
+    if (
+        elements.next
+    ) {
 
         elements.next.disabled =
             !hasQueue;
     }
 
 
-    if (elements.prev) {
+    if (
+        elements.prev
+    ) {
 
         elements.prev.disabled =
             !hasQueue;
@@ -1417,7 +1719,11 @@ function renderQueue() {
 
             title.textContent =
                 track.title ||
-                "Vídeo do YouTube";
+                (
+                    track.playlistId
+                        ? "Playlist do YouTube"
+                        : "Vídeo do YouTube"
+                );
 
 
             const subtitle =
@@ -1494,6 +1800,10 @@ function renderQueue() {
 }
 
 
+/* =========================================================
+   ATUALIZA ITEM ATUAL
+========================================================= */
+
 function updateQueueSelection() {
 
     if (!elements.queueList) {
@@ -1520,7 +1830,7 @@ function updateQueueSelection() {
 
 
 /* =========================================================
-   ABRIR / FECHAR QUEUE
+   QUEUE PANEL
 ========================================================= */
 
 function toggleQueue() {
@@ -1569,7 +1879,7 @@ function closeQueue() {
 function setupEvents() {
 
     /* -----------------------------------------------------
-       BUSCAR
+       ADICIONAR
     ----------------------------------------------------- */
 
     if (
@@ -1620,7 +1930,9 @@ function setupEvents() {
        PLAY
     ----------------------------------------------------- */
 
-    if (elements.play) {
+    if (
+        elements.play
+    ) {
 
         elements.play.addEventListener(
             "click",
@@ -1633,7 +1945,9 @@ function setupEvents() {
        NEXT
     ----------------------------------------------------- */
 
-    if (elements.next) {
+    if (
+        elements.next
+    ) {
 
         elements.next.addEventListener(
             "click",
@@ -1646,7 +1960,9 @@ function setupEvents() {
        PREVIOUS
     ----------------------------------------------------- */
 
-    if (elements.prev) {
+    if (
+        elements.prev
+    ) {
 
         elements.prev.addEventListener(
             "click",
@@ -1723,48 +2039,61 @@ async function init() {
     renderQueue();
 
 
+    /*
+     * Backend
+     */
+
     checkAPI()
-        .then(online => {
+        .then(
+            online => {
 
-            if (online) {
+                if (online) {
 
-                setStatus(
-                    "Cole um link do YouTube para começar."
+                    setStatus(
+                        "Cole um link do YouTube para começar."
+                    );
+
+                } else {
+
+                    setStatus(
+                        "API offline."
+                    );
+                }
+            }
+        )
+        .catch(
+            error => {
+
+                console.warn(
+                    "[ApolloMusic] Health:",
+                    error
                 );
-
-            } else {
 
                 setStatus(
                     "API offline."
                 );
             }
-
-        })
-        .catch(error => {
-
-            console.warn(
-                "[ApolloMusic] Health:",
-                error
-            );
-
-            setStatus(
-                "API offline."
-            );
-        });
+        );
 
 
     /*
-     * Carrega a API do YouTube em background.
+     * YouTube IFrame API
      */
 
     loadYouTubeAPI()
-        .catch(error => {
+        .catch(
+            error => {
 
-            console.error(
-                "[ApolloMusic] YouTube API:",
-                error
-            );
-        });
+                console.error(
+                    "[ApolloMusic] YouTube API:",
+                    error
+                );
+
+                setStatus(
+                    "Não foi possível carregar o YouTube."
+                );
+            }
+        );
 }
 
 
@@ -1787,7 +2116,8 @@ if (
 
         },
         {
-            once: true
+            once:
+                true
         }
     );
 
