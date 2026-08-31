@@ -87,19 +87,13 @@ input:focus-visible {
 :root {
 
     --background: #121212;
-
     --surface: #181818;
-
     --surface-container: #1d1d1d;
-
     --surface-container-high: #242424;
-
     --surface-container-highest: #2c2c2c;
-
     --surface-bright: #303030;
 
     --on-surface: #f5f5f5;
-
     --on-surface-variant: #aaaaaa;
 
     --outline: #454545;
@@ -116,17 +110,12 @@ input:focus-visible {
         rgba(114, 255, 114, 0.28);
 
     --white: #ffffff;
-
     --black: #000000;
 
     --radius-extra-large: 30px;
-
     --radius-large: 24px;
-
     --radius-medium: 18px;
-
     --radius-small: 12px;
-
     --radius-pill: 999px;
 
     --ease-expressive:
@@ -483,7 +472,7 @@ input:focus-visible {
 
 
 /* =========================================================
-   COVER
+   CURRENT THUMBNAIL
 ========================================================= */
 
 .now-playing {
@@ -502,11 +491,14 @@ input:focus-visible {
 
     width: min(100%, 420px);
 
-    aspect-ratio: 16 / 9;
+    /*
+     * QUADRADO
+     */
+    aspect-ratio: 1 / 1;
 
     overflow: hidden;
 
-    border-radius: 20px;
+    border-radius: 22px;
 
     background:
         linear-gradient(
@@ -531,7 +523,13 @@ input:focus-visible {
     width: 100%;
     height: 100%;
 
+    /*
+     * Croppa a thumbnail 16:9
+     * para preencher o quadrado.
+     */
     object-fit: cover;
+
+    object-position: center;
 
     opacity: 0;
 
@@ -615,11 +613,6 @@ input:focus-visible {
         scale(1.06);
 
     background: #eeeeee;
-}
-
-
-.cover-play-button.playing {
-    background: #ffffff;
 }
 
 
@@ -1035,13 +1028,11 @@ input:focus-visible {
 
     align-items: center;
 
-    gap: 10px;
-
     width: 100%;
 
     min-height: 60px;
 
-    padding: 8px;
+    padding: 10px 12px;
 
     border-radius: 15px;
 
@@ -1071,20 +1062,6 @@ input:focus-visible {
     box-shadow:
         inset 3px 0 0
         var(--white);
-}
-
-
-.queue-item img {
-    width: 44px;
-    height: 44px;
-
-    flex: 0 0 44px;
-
-    object-fit: cover;
-
-    border-radius: 11px;
-
-    background: #181818;
 }
 
 
@@ -1340,10 +1317,6 @@ input:focus-visible {
         rgba(0, 0, 0, 0.25);
 }
 
-
-/* =========================================================
-   RESULTS
-========================================================= */
 
 .youtube-results {
     display: flex;
@@ -1659,6 +1632,7 @@ input:focus-visible {
         transform:
             translateY(0);
     }
+
 }
 
 
@@ -1679,6 +1653,7 @@ input:focus-visible {
             translateY(0)
             scale(1);
     }
+
 }
 
 
@@ -1729,7 +1704,11 @@ input:focus-visible {
 
 
     .cover-wrapper {
-        border-radius: 15px;
+        width: min(100%, 360px);
+
+        aspect-ratio: 1 / 1;
+
+        border-radius: 17px;
     }
 
 
@@ -1812,6 +1791,7 @@ input:focus-visible {
     .splash-logo {
         font-size: 34px;
     }
+
 }
 
 
@@ -1843,6 +1823,11 @@ input:focus-visible {
         padding: 11px;
 
         border-radius: 20px;
+    }
+
+
+    .cover-wrapper {
+        border-radius: 15px;
     }
 
 
@@ -1932,6 +1917,7 @@ input:focus-visible {
     .splash-version {
         font-size: 8px;
     }
+
 }
 
 
@@ -1944,7 +1930,9 @@ input:focus-visible {
     *,
     *::before,
     *::after {
-        scroll-behavior: auto !important;
+
+        scroll-behavior:
+            auto !important;
 
         animation-duration:
             0.01ms !important;
@@ -1954,5 +1942,7 @@ input:focus-visible {
 
         transition-duration:
             0.01ms !important;
+
     }
+
 }
