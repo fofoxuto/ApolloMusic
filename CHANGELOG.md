@@ -1,6 +1,20 @@
-# 🎵 ApolloMusic - Changelog
+<div align="center">
+  <h1>🎵 ApolloMusic - Changelog</h1>
+  <p><em>Acompanhe a evolução do projeto através de suas principais versões.</em></p>
 
-## Sobre as Versões
+<p>
+  <img src="https://img.shields.io/badge/Versao-0.3.0-blue?style=for-the-badge" alt="Versão Atual" />
+  <img src="https://img.shields.io/badge/Status-Em_Evolucao-success?style=for-the-badge" alt="Status" />
+  <img src="https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white" alt="Node.js" />
+  <img src="https://img.shields.io/badge/Express-000000?style=for-the-badge&logo=express&logoColor=white" alt="Express" />
+  <img src="https://img.shields.io/badge/YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white" alt="YouTube" />
+</p>
+
+---
+
+</div>
+
+## 💡 Sobre as Versões
 
 O **ApolloMusic** é um player de áudio web desenvolvido com foco em performance, minimalismo e experiência do usuário. Este changelog documenta a evolução do projeto através de suas principais versões.
 
