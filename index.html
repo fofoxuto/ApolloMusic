@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>ApolloMusic</title>
+    <title>ApolloMusic - YouTube</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -32,7 +32,7 @@
             </div>
 
             <div class="splash-version">
-                AUDIUS INDEXER
+                YOUTUBE PLAYER
             </div>
 
             <div class="splash-loader">
@@ -62,11 +62,11 @@
         <header class="header-centered">
 
             <span class="top-label">
-                Tocando agora
+                Reprodutor YouTube
             </span>
 
             <h1 id="status">
-                Aguardando música.
+                Aguardando link.
             </h1>
 
         </header>
@@ -76,163 +76,49 @@
 
         <section class="player">
 
-            <div class="cover-wrapper">
+            <!-- YOUTUBE CONTAINER -->
 
-                <img
-                    id="cover"
-                    src=""
-                    alt="Capa da música"
-                    hidden
-                >
-
-            </div>
-
-
-            <div class="track-info">
-
-                <div class="metadata-left">
-
-                    <h2 id="title">
-                        ---
-                    </h2>
-
-                    <p id="artist">
-                        ---
-                    </p>
-
-                    <p
-                        id="album"
-                        class="album"
-                    ></p>
-
-                </div>
-
-
-                <span
-                    id="counter"
-                    class="counter"
-                >
-                    0 / 0
-                </span>
-
-            </div>
-
-
-            <!-- PROGRESSO -->
-
-            <div class="audio-controls-visual">
-
-                <div class="volume-control">
-
-                    <div class="volume-bar-bg">
-
-                        <div class="volume-bar-thumb"></div>
-
-                    </div>
-
-                </div>
-
-
-                <div class="progress-section">
-
-                    <div
-                        id="progressBar"
-                        class="progress-bar-bg"
-                    >
-
-                        <div
-                            id="progressFill"
-                            class="progress-bar-fill"
-                        ></div>
-
-                    </div>
-
-
-                    <div class="progress-times">
-
-                        <span id="currentTime">
-                            0:00
-                        </span>
-
-                        <span id="duration">
-                            --:--
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </div>
-
-
-            <!-- CONTROLES -->
-
-            <div class="controls">
-
-                <button
-                    id="prev"
-                    type="button"
-                    aria-label="Faixa anterior"
-                >
-                    ‹
-                </button>
-
-
-                <button
-                    id="play"
-                    type="button"
-                    aria-label="Reproduzir"
-                >
-                    ▶
-                </button>
-
-
-                <button
-                    id="next"
-                    type="button"
-                    aria-label="Próxima faixa"
-                >
-                    ›
-                </button>
-
-            </div>
+            <div
+                id="youtubeContainer"
+                class="youtube-container"
+            ></div>
 
         </section>
 
 
-        <!-- AUDIUS -->
+        <!-- YOUTUBE INPUT -->
 
         <section class="library">
 
             <h2>
-                Audius
+                YouTube
             </h2>
 
 
-            <div class="audius-input">
+            <div class="youtube-input">
 
                 <input
-                    id="audiusSearch"
-                    type="search"
-                    placeholder="Pesquisar músicas no Audius"
+                    id="youtubeSearch"
+                    type="url"
+                    placeholder="Cole o link do YouTube (vídeo ou playlist)"
                     autocomplete="off"
                     spellcheck="false"
                 >
 
 
                 <button
-                    id="searchAudius"
+                    id="searchYoutube"
                     type="button"
                 >
-                    Buscar
+                    Reproduzir
                 </button>
 
             </div>
 
 
             <div
-                id="audiusResults"
-                class="audius-results"
+                id="youtubeResults"
+                class="youtube-results"
             ></div>
 
         </section>
