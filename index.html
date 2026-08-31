@@ -23,6 +23,10 @@
     <title>ApolloMusic — YouTube</title>
 
 
+    <!-- =====================================================
+         FONTES
+    ====================================================== -->
+
     <link
         rel="preconnect"
         href="https://fonts.googleapis.com"
@@ -39,6 +43,11 @@
         rel="stylesheet"
     >
 
+
+    <!-- =====================================================
+         CSS
+    ====================================================== -->
+
     <link
         rel="stylesheet"
         href="style.css"
@@ -51,7 +60,7 @@
 
 
     <!-- =====================================================
-         SPLASH
+         SPLASH SCREEN
     ====================================================== -->
 
     <div
@@ -60,6 +69,7 @@
     >
 
         <div class="splash-content">
+
 
             <div class="splash-logo">
 
@@ -111,8 +121,9 @@
     </div>
 
 
+
     <!-- =====================================================
-         APP
+         APPLICATION
     ====================================================== -->
 
     <main class="app">
@@ -124,7 +135,9 @@
 
         <header class="header">
 
+
             <div class="brand">
+
 
                 <div class="brand-mark">
                     A
@@ -146,6 +159,7 @@
             </div>
 
 
+
             <div class="status-area">
 
                 <span
@@ -159,7 +173,9 @@
 
             </div>
 
+
         </header>
+
 
 
         <!-- =================================================
@@ -171,7 +187,9 @@
             aria-label="Player"
         >
 
+
             <div class="player-header">
+
 
                 <div>
 
@@ -179,16 +197,9 @@
                         PLAYER
                     </span>
 
-                    <h1 id="nowPlayingTitle">
-                        Nenhuma música
+                    <h1>
+                        Reproduzindo
                     </h1>
-
-                    <p
-                        id="nowPlayingArtist"
-                        class="now-playing-artist"
-                    >
-                        Adicione uma música do YouTube
-                    </p>
 
                 </div>
 
@@ -198,64 +209,39 @@
                     aria-label="Fonte: YouTube"
                 >
 
-                    <span aria-hidden="true"></span>
+                    <span
+                        aria-hidden="true"
+                    ></span>
 
                     YouTube
 
                 </div>
 
-            </div>
-
-
-            <!-- =================================================
-                 CAPA / THUMBNAIL ATUAL
-            ================================================== -->
-
-            <div class="now-playing">
-
-                <div class="cover-wrapper">
-
-                    <img
-                        id="nowPlayingCover"
-                        class="now-playing-cover"
-                        src=""
-                        alt="Thumbnail da música atual"
-                    >
-
-
-                    <button
-                        id="coverPlayButton"
-                        class="cover-play-button"
-                        type="button"
-                        aria-label="Reproduzir"
-                        title="Reproduzir"
-                    >
-                        ▶
-                    </button>
-
-                </div>
 
             </div>
 
 
-            <!-- =================================================
-                 YOUTUBE PLAYER
-            ================================================== -->
+
+            <!-- PLAYER YOUTUBE -->
 
             <div
                 id="youtubeContainer"
                 class="youtube-container"
-                aria-hidden="true"
             ></div>
 
 
+
             <!-- =================================================
-                 CONTROLES
+                 CONTROLES MATERIAL 3 EXPRESSIVE
             ================================================== -->
 
             <div class="player-controls">
 
+
+                <!-- PROGRESSO -->
+
                 <div class="progress-area">
+
 
                     <span
                         id="currentTime"
@@ -284,10 +270,15 @@
                         0:00
                     </span>
 
+
                 </div>
 
 
+
+                <!-- BOTÕES -->
+
                 <div class="controls-row">
+
 
                     <button
                         id="prevButton"
@@ -302,6 +293,7 @@
                     </button>
 
 
+
                     <button
                         id="playButton"
                         class="m3-button m3-play-button"
@@ -309,8 +301,11 @@
                         aria-label="Reproduzir"
                         title="Reproduzir"
                     >
-                        ▶
+                        <span aria-hidden="true">
+                            ▶
+                        </span>
                     </button>
+
 
 
                     <button
@@ -324,6 +319,7 @@
                             ⏭
                         </span>
                     </button>
+
 
 
                     <button
@@ -347,9 +343,12 @@
 
                     </button>
 
+
                 </div>
 
+
             </div>
+
 
 
             <!-- =================================================
@@ -362,7 +361,9 @@
                 aria-hidden="true"
             >
 
+
                 <div class="queue-header">
+
 
                     <div>
 
@@ -385,6 +386,7 @@
                         Fechar
                     </button>
 
+
                 </div>
 
 
@@ -393,18 +395,25 @@
                     class="queue-list"
                 ></div>
 
+
             </div>
 
+
         </section>
+
 
 
         <!-- =================================================
              ADD MUSIC
         ================================================== -->
 
-        <section class="library expressive-card">
+        <section
+            class="library expressive-card"
+        >
+
 
             <div class="library-header">
+
 
                 <div>
 
@@ -423,12 +432,18 @@
                     01
                 </div>
 
+
             </div>
 
 
+
+            <!-- INPUT EXPRESSIVE -->
+
             <div class="youtube-input">
 
+
                 <div class="input-wrap">
+
 
                     <span
                         class="input-icon"
@@ -440,7 +455,7 @@
 
                     <input
                         id="youtubeSearch"
-                        type="text"
+                        type="url"
                         inputmode="url"
                         placeholder="Cole o link do YouTube"
                         autocomplete="off"
@@ -448,7 +463,9 @@
                         aria-label="Link do YouTube"
                     >
 
+
                 </div>
+
 
 
                 <button
@@ -461,28 +478,37 @@
                         Adicionar
                     </span>
 
-                    <strong aria-hidden="true">
+                    <strong
+                        aria-hidden="true"
+                    >
                         →
                     </strong>
 
                 </button>
 
+
             </div>
 
+
+
+            <!-- RESULTADOS -->
 
             <div
                 id="youtubeResults"
                 class="youtube-results"
             ></div>
 
+
         </section>
 
 
+
         <!-- =================================================
-             INFO
+             INFO EXPRESSIVE
         ================================================== -->
 
         <section class="quick-info">
+
 
             <div class="info-chip">
 
@@ -531,7 +557,9 @@
 
             </div>
 
+
         </section>
+
 
 
         <!-- =================================================
@@ -540,42 +568,41 @@
 
         <footer class="footer">
 
+
             <span>
                 APOLLOMUSIC
             </span>
 
+
             <i aria-hidden="true">
                 •
             </i>
+
 
             <span>
                 YOUTUBE
             </span>
 
+
             <i aria-hidden="true">
                 •
             </i>
+
 
             <span>
                 @FOFOXUTO
             </span>
 
+
         </footer>
+
 
     </main>
 
 
-    <!-- =====================================================
-         YOUTUBE API
-    ====================================================== -->
-
-    <script
-        src="https://www.youtube.com/iframe_api"
-    ></script>
-
 
     <!-- =====================================================
-         APP
+         JAVASCRIPT
     ====================================================== -->
 
     <script src="app.js"></script>
