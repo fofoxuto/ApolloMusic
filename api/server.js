@@ -62,10 +62,7 @@ app.use(
    LOG
 ========================================================= */
 
-function logDebug(
-    message,
-    data = null
-) {
+function logDebug(message, data = null) {
 
     const timestamp =
         new Date().toISOString();
@@ -94,10 +91,7 @@ function logDebug(
 }
 
 
-function logError(
-    message,
-    error = null
-) {
+function logError(message, error = null) {
 
     const timestamp =
         new Date().toISOString();
@@ -114,11 +108,10 @@ function logError(
 
 
 /* =========================================================
-   YOUTUBE.JS
+   YOUTUBE.JS / INNERTUBE
 ========================================================= */
 
 let youtube = null;
-
 let youtubePromise = null;
 
 
@@ -134,6 +127,11 @@ async function getYouTube() {
 
         return youtubePromise;
     }
+
+
+    logDebug(
+        "Inicializando YouTube.js..."
+    );
 
 
     youtubePromise =
@@ -155,11 +153,8 @@ async function getYouTube() {
         })
         .catch(error => {
 
-            youtubePromise =
-                null;
-
-            youtube =
-                null;
+            youtube = null;
+            youtubePromise = null;
 
             logError(
                 "Falha ao inicializar YouTube.js.",
@@ -181,7 +176,6 @@ async function getYouTube() {
 function cleanVideoId(id) {
 
     if (!id) {
-
         return null;
     }
 
@@ -195,25 +189,18 @@ function cleanVideoId(id) {
             );
 
 
-    if (
-        !value
-    ) {
-
+    if (!value) {
         return null;
     }
 
 
-    return value.slice(
-        0,
-        20
-    );
+    return value.slice(0, 20);
 }
 
 
 function cleanPlaylistId(id) {
 
     if (!id) {
-
         return null;
     }
 
@@ -227,23 +214,17 @@ function cleanPlaylistId(id) {
             );
 
 
-    if (
-        !value
-    ) {
-
+    if (!value) {
         return null;
     }
 
 
-    return value.slice(
-        0,
-        100
-    );
+    return value.slice(0, 100);
 }
 
 
 /* =========================================================
-   EXTRAI TEXTO
+   TEXTO
 ========================================================= */
 
 function getText(value) {
@@ -258,22 +239,15 @@ function getText(value) {
 
 
     if (
-        typeof value ===
-        "string"
+        typeof value === "string"
     ) {
 
         return value.trim();
     }
 
 
-    /*
-     * youtubei.js pode entregar
-     * objetos Text.
-     */
-
     if (
-        typeof value.text ===
-        "string"
+        typeof value.text === "string"
     ) {
 
         return value.text.trim();
@@ -281,8 +255,18 @@ function getText(value) {
 
 
     if (
-        typeof value.toString ===
-        "function"
+        Array.isArray(value.runs)
+    ) {
+
+        return value.runs
+            .map(run => run?.text || "")
+            .join("")
+            .trim();
+    }
+
+
+    if (
+        typeof value.toString === "function"
     ) {
 
         try {
@@ -309,12 +293,10 @@ function getText(value) {
 
 
 /* =========================================================
-   YOUTUBE URL
+   URL DO YOUTUBE
 ========================================================= */
 
-function isValidYouTubeUrl(
-    url
-) {
+function isValidYouTubeUrl(url) {
 
     try {
 
@@ -325,10 +307,7 @@ function isValidYouTubeUrl(
         const hostname =
             parsed.hostname
                 .toLowerCase()
-                .replace(
-                    /^www\./,
-                    ""
-                );
+                .replace(/^www\./, "");
 
 
         return [
@@ -336,9 +315,7 @@ function isValidYouTubeUrl(
             "music.youtube.com",
             "m.youtube.com",
             "youtu.be"
-        ].includes(
-            hostname
-        );
+        ].includes(hostname);
 
     } catch {
 
@@ -348,12 +325,10 @@ function isValidYouTubeUrl(
 
 
 /* =========================================================
-   VIDEO ID
+   EXTRAI VIDEO ID
 ========================================================= */
 
-function extractVideoId(
-    url
-) {
+function extractVideoId(url) {
 
     try {
 
@@ -364,16 +339,8 @@ function extractVideoId(
         const hostname =
             parsed.hostname
                 .toLowerCase()
-                .replace(
-                    /^www\./,
-                    ""
-                );
+                .replace(/^www\./, "");
 
-
-        /*
-         * youtube.com
-         * youtube.com/watch?v=
-         */
 
         if (
             hostname === "youtube.com" ||
@@ -382,56 +349,35 @@ function extractVideoId(
         ) {
 
             if (
-                parsed.pathname ===
-                "/watch"
+                parsed.pathname === "/watch"
             ) {
 
                 return cleanVideoId(
-                    parsed.searchParams.get(
-                        "v"
-                    )
+                    parsed.searchParams.get("v")
                 );
             }
 
 
-            /*
-             * /shorts/ID
-             */
-
             if (
-                parsed.pathname.startsWith(
-                    "/shorts/"
-                )
+                parsed.pathname.startsWith("/shorts/")
             ) {
 
                 return cleanVideoId(
-                    parsed.pathname
-                        .split("/")[2]
+                    parsed.pathname.split("/")[2]
                 );
             }
 
 
-            /*
-             * /embed/ID
-             */
-
             if (
-                parsed.pathname.startsWith(
-                    "/embed/"
-                )
+                parsed.pathname.startsWith("/embed/")
             ) {
 
                 return cleanVideoId(
-                    parsed.pathname
-                        .split("/")[2]
+                    parsed.pathname.split("/")[2]
                 );
             }
         }
 
-
-        /*
-         * youtu.be/ID
-         */
 
         if (
             hostname === "youtu.be"
@@ -458,12 +404,10 @@ function extractVideoId(
 
 
 /* =========================================================
-   PLAYLIST ID
+   EXTRAI PLAYLIST ID
 ========================================================= */
 
-function extractPlaylistId(
-    url
-) {
+function extractPlaylistId(url) {
 
     try {
 
@@ -472,9 +416,7 @@ function extractPlaylistId(
 
 
         return cleanPlaylistId(
-            parsed.searchParams.get(
-                "list"
-            )
+            parsed.searchParams.get("list")
         );
 
     } catch (error) {
@@ -509,22 +451,19 @@ function getThumbnail(
             thumbnails.length > 0
         ) {
 
-            /*
-             * Normalmente a última
-             * possui a maior resolução.
-             */
-
-            const thumbnail =
-                thumbnails[
-                    thumbnails.length - 1
-                ];
-
-
-            if (
-                thumbnail?.url
+            for (
+                let i = thumbnails.length - 1;
+                i >= 0;
+                i--
             ) {
 
-                return thumbnail.url;
+                const url =
+                    thumbnails[i]?.url;
+
+                if (url) {
+
+                    return url;
+                }
             }
         }
 
@@ -541,33 +480,51 @@ function getThumbnail(
 
 
 /* =========================================================
-   NORMALIZA ITEM
+   NORMALIZA ITEM DA PLAYLIST
 ========================================================= */
 
-function normalizePlaylistItem(
-    item
-) {
+function normalizePlaylistItem(item) {
 
     if (!item) {
-
         return null;
     }
 
 
     /*
-     * youtubei.js atualmente
-     * costuma fornecer `id`.
-     *
-     * Mantemos os outros formatos
-     * como compatibilidade.
+     * O youtubei.js pode usar diferentes
+     * propriedades dependendo da versão.
      */
 
-    const videoId =
-        cleanVideoId(
-            item.id ||
-            item.video_id ||
-            item.videoId
-        );
+    let videoId =
+        item.id ||
+        item.video_id ||
+        item.videoId ||
+        item.video?.id ||
+        item.video?.video_id;
+
+
+    /*
+     * Alguns objetos podem possuir
+     * o ID dentro de endpoint.
+     */
+
+    if (!videoId) {
+
+        try {
+
+            videoId =
+                item.endpoint?.payload?.videoId ||
+                item.endpoint?.payload?.video_id ||
+                item.navigation_endpoint?.payload?.videoId;
+
+        } catch {
+            /* ignora */
+        }
+    }
+
+
+    videoId =
+        cleanVideoId(videoId);
 
 
     if (!videoId) {
@@ -577,22 +534,16 @@ function normalizePlaylistItem(
 
 
     const title =
-        getText(
-            item.title
-        ) ||
+        getText(item.title) ||
+        getText(item.video?.title) ||
         "Vídeo do YouTube";
 
 
     const artist =
-        getText(
-            item.author
-        ) ||
-        getText(
-            item.short_byline_text
-        ) ||
-        getText(
-            item.channel
-        ) ||
+        getText(item.author) ||
+        getText(item.short_byline_text) ||
+        getText(item.channel) ||
+        getText(item.video?.author) ||
         "YouTube";
 
 
@@ -611,11 +562,9 @@ function normalizePlaylistItem(
         videoId:
             videoId,
 
-        title:
-            title,
+        title,
 
-        artist:
-            artist,
+        artist,
 
         album:
             "",
@@ -623,8 +572,7 @@ function normalizePlaylistItem(
         cover:
             thumbnail,
 
-        thumbnail:
-            thumbnail,
+        thumbnail,
 
         url:
             `https://www.youtube.com/watch?v=${videoId}`
@@ -636,43 +584,31 @@ function normalizePlaylistItem(
    REMOVE DUPLICADOS
 ========================================================= */
 
-function removeDuplicateTracks(
-    tracks
-) {
+function removeDuplicateTracks(tracks) {
 
     const seen =
         new Set();
 
 
-    return tracks.filter(
-        track => {
+    return tracks.filter(track => {
 
-            if (
-                !track?.id
-            ) {
-
-                return false;
-            }
-
-
-            if (
-                seen.has(
-                    track.id
-                )
-            ) {
-
-                return false;
-            }
-
-
-            seen.add(
-                track.id
-            );
-
-
-            return true;
+        if (!track?.id) {
+            return false;
         }
-    );
+
+
+        if (
+            seen.has(track.id)
+        ) {
+
+            return false;
+        }
+
+
+        seen.add(track.id);
+
+        return true;
+    });
 }
 
 
@@ -680,64 +616,186 @@ function removeDuplicateTracks(
    ESCANEIA PLAYLIST
 ========================================================= */
 
-async function getPlaylistItems(
-    playlistId
-) {
+async function getPlaylistItems(playlistId) {
 
     const yt =
         await getYouTube();
 
 
     logDebug(
-        "Buscando playlist...",
+        "1. YouTube.js iniciado."
+    );
+
+
+    logDebug(
+        "2. Buscando playlist.",
         {
             playlistId
         }
     );
 
 
-    /*
-     * O YouTube.js aceita diretamente
-     * o ID da playlist.
-     */
+    let playlist;
 
-    const playlist =
-        await yt.getPlaylist(
-            playlistId
+
+    try {
+
+        playlist =
+            await yt.getPlaylist(
+                playlistId
+            );
+
+    } catch (error) {
+
+        logError(
+            "3. Erro dentro de yt.getPlaylist().",
+            error
         );
+
+        throw new Error(
+            `YouTube.js não conseguiu abrir a playlist: ${error?.message || "erro desconhecido"}`
+        );
+    }
 
 
     if (!playlist) {
 
         throw new Error(
-            "O YouTube não retornou a playlist."
+            "O YouTube.js retornou uma playlist vazia."
         );
     }
 
 
+    logDebug(
+        "4. Playlist recebida.",
+        {
+            keys:
+                Object.keys(playlist || {})
+        }
+    );
+
+
     /*
-     * Playlist do YouTube.js
-     * expõe os itens através de `.items`.
+     * Primeira página.
      */
 
-    const rawItems =
-        Array.isArray(
-            playlist.items
-        )
-            ? playlist.items
+    let rawItems =
+        Array.isArray(playlist.items)
+            ? [...playlist.items]
             : [];
 
 
     logDebug(
-        "Itens brutos encontrados.",
+        "5. Itens encontrados na primeira página.",
         {
-            playlistId,
-
             count:
                 rawItems.length
         }
     );
 
+
+    /*
+     * Tenta paginação quando disponível.
+     */
+
+    try {
+
+        if (
+            typeof playlist.has_continuation ===
+            "function"
+        ) {
+
+            let pages = 0;
+
+
+            while (
+                playlist.has_continuation() &&
+                pages < 20
+            ) {
+
+                pages++;
+
+
+                logDebug(
+                    "6. Carregando próxima página.",
+                    {
+                        page:
+                            pages
+                    }
+                );
+
+
+                const next =
+                    await playlist.getContinuation();
+
+
+                if (!next) {
+                    break;
+                }
+
+
+                const nextItems =
+                    Array.isArray(next.items)
+                        ? next.items
+                        : [];
+
+
+                rawItems.push(
+                    ...nextItems
+                );
+
+
+                /*
+                 * Algumas versões retornam
+                 * um novo objeto de playlist.
+                 */
+
+                playlist =
+                    next;
+
+
+                logDebug(
+                    "Página carregada.",
+                    {
+                        page:
+                            pages,
+
+                        items:
+                            nextItems.length,
+
+                        total:
+                            rawItems.length
+                    }
+                );
+            }
+        }
+
+    } catch (error) {
+
+        /*
+         * Se a paginação falhar, mantém
+         * os vídeos já encontrados.
+         */
+
+        logError(
+            "Erro durante paginação da playlist.",
+            error
+        );
+    }
+
+
+    logDebug(
+        "7. Total de itens brutos.",
+        {
+            count:
+                rawItems.length
+        }
+    );
+
+
+    /*
+     * Normalização.
+     */
 
     const normalized =
         rawItems
@@ -754,14 +812,46 @@ async function getPlaylistItems(
 
 
     logDebug(
-        "Itens normalizados.",
+        "8. Itens normalizados.",
         {
-            playlistId,
+            brutos:
+                rawItems.length,
 
-            count:
+            validos:
                 items.length
         }
     );
+
+
+    /*
+     * Mostra um exemplo no log para
+     * facilitar debug no Render.
+     */
+
+    if (
+        rawItems.length > 0
+    ) {
+
+        logDebug(
+            "9. Exemplo do primeiro item bruto.",
+            {
+                keys:
+                    Object.keys(
+                        rawItems[0] || {}
+                    )
+            }
+        );
+    }
+
+
+    if (
+        items.length === 0
+    ) {
+
+        throw new Error(
+            "O YouTube.js encontrou a playlist, mas não conseguiu identificar os vídeos."
+        );
+    }
 
 
     return items;
@@ -772,32 +862,26 @@ async function getPlaylistItems(
    ROOT
 ========================================================= */
 
-app.get(
-    "/",
-    (req, res) => {
+app.get("/", (req, res) => {
 
-        res.json({
+    res.json({
 
-            name:
-                "ApolloMusic API - YouTube",
+        name:
+            "ApolloMusic API - YouTube",
 
-            version:
-                "0.5.0",
+        version:
+            "0.6.0",
 
-            status:
-                "online",
+        status:
+            "online",
 
-            cors:
-                "enabled",
+        youtube:
+            "youtubei.js",
 
-            type:
-                "youtube-player",
-
-            apiKeyRequired:
-                false
-        });
-    }
-);
+        apiKeyRequired:
+            false
+    });
+});
 
 
 /* =========================================================
@@ -821,9 +905,6 @@ app.get(
 
             apiKeyRequired:
                 false,
-
-            cors:
-                "enabled",
 
             timestamp:
                 new Date().toISOString()
@@ -861,21 +942,15 @@ app.post(
 
 
         const valid =
-            isValidYouTubeUrl(
-                url
-            );
+            isValidYouTubeUrl(url);
 
 
         const videoId =
-            extractVideoId(
-                url
-            );
+            extractVideoId(url);
 
 
         const playlistId =
-            extractPlaylistId(
-                url
-            );
+            extractPlaylistId(url);
 
 
         res.json({
@@ -937,16 +1012,29 @@ app.get(
             type:
                 "video",
 
+            title:
+                "Vídeo do YouTube",
+
+            artist:
+                "YouTube",
+
+            album:
+                "",
+
+            cover:
+                `https://i.ytimg.com/vi/` +
+                `${videoId}/hqdefault.jpg`,
+
+            thumbnail:
+                `https://i.ytimg.com/vi/` +
+                `${videoId}/hqdefault.jpg`,
+
             embedUrl:
                 `https://www.youtube.com/embed/` +
                 `${videoId}?autoplay=1`,
 
             watchUrl:
-                `https://www.youtube.com/watch?v=${videoId}`,
-
-            thumbnail:
-                `https://i.ytimg.com/vi/` +
-                `${videoId}/hqdefault.jpg`
+                `https://www.youtube.com/watch?v=${videoId}`
         });
     }
 );
@@ -1002,18 +1090,8 @@ app.get(
                 count:
                     items.length,
 
-                /*
-                 * Formato principal
-                 * usado pelo app.js.
-                 */
-
                 playlistItems:
                     items,
-
-                /*
-                 * Alias para facilitar
-                 * compatibilidade.
-                 */
 
                 items:
                     items,
@@ -1025,7 +1103,7 @@ app.get(
         } catch (error) {
 
             logError(
-                "Erro ao obter playlist.",
+                "Erro no endpoint de playlist.",
                 error
             );
 
@@ -1037,11 +1115,16 @@ app.get(
                     processed:
                         false,
 
+                    type:
+                        "playlist",
+
+                    playlistId,
+
                     error:
                         "Não foi possível obter os vídeos da playlist.",
 
                     details:
-                        error.message || ""
+                        error?.message || ""
                 });
         }
     }
@@ -1062,7 +1145,7 @@ app.post(
 
 
         logDebug(
-            "POST /api/youtube/process",
+            "POST /api/youtube/process.",
             {
                 url
             }
@@ -1085,9 +1168,7 @@ app.post(
 
 
         if (
-            !isValidYouTubeUrl(
-                url
-            )
+            !isValidYouTubeUrl(url)
         ) {
 
             return res
@@ -1106,24 +1187,18 @@ app.post(
         try {
 
             const videoId =
-                extractVideoId(
-                    url
-                );
+                extractVideoId(url);
 
 
             const playlistId =
-                extractPlaylistId(
-                    url
-                );
+                extractPlaylistId(url);
 
 
             /* =================================================
                PLAYLIST
             ================================================= */
 
-            if (
-                playlistId
-            ) {
+            if (playlistId) {
 
                 logDebug(
                     "Playlist detectada.",
@@ -1137,16 +1212,6 @@ app.post(
                     await getPlaylistItems(
                         playlistId
                     );
-
-
-                if (
-                    playlistItems.length === 0
-                ) {
-
-                    throw new Error(
-                        "Nenhum vídeo acessível foi encontrado na playlist."
-                    );
-                }
 
 
                 const result = {
@@ -1164,7 +1229,8 @@ app.post(
                     count:
                         playlistItems.length,
 
-                    playlistItems,
+                    playlistItems:
+                        playlistItems,
 
                     items:
                         playlistItems,
@@ -1195,11 +1261,14 @@ app.post(
                VÍDEO
             ================================================= */
 
-            if (
-                videoId
-            ) {
+            if (videoId) {
 
-                const result = {
+                const thumbnail =
+                    `https://i.ytimg.com/vi/` +
+                    `${videoId}/hqdefault.jpg`;
+
+
+                return res.json({
 
                     url,
 
@@ -1220,13 +1289,10 @@ app.post(
                     album:
                         "",
 
-                    thumbnail:
-                        `https://i.ytimg.com/vi/` +
-                        `${videoId}/hqdefault.jpg`,
-
                     cover:
-                        `https://i.ytimg.com/vi/` +
-                        `${videoId}/hqdefault.jpg`,
+                        thumbnail,
+
+                    thumbnail,
 
                     embedUrl:
                         `https://www.youtube.com/embed/` +
@@ -1237,18 +1303,9 @@ app.post(
 
                     timestamp:
                         new Date().toISOString()
-                };
-
-
-                return res.json(
-                    result
-                );
+                });
             }
 
-
-            /* =================================================
-               INVÁLIDO
-            ================================================= */
 
             return res
                 .status(400)
@@ -1280,7 +1337,7 @@ app.post(
                         "Não foi possível processar o conteúdo do YouTube.",
 
                     details:
-                        error.message || ""
+                        error?.message || ""
                 });
         }
     }
@@ -1304,7 +1361,7 @@ app.get(
                 "ApolloMusic YouTube API",
 
             version:
-                "0.5.0",
+                "0.6.0",
 
             youtube:
                 "youtubei.js",
@@ -1321,6 +1378,9 @@ app.get(
                     true,
 
                 playlistScanning:
+                    true,
+
+                pagination:
                     true,
 
                 metadata:
@@ -1410,9 +1470,7 @@ app.use(
             res.headersSent
         ) {
 
-            return next(
-                error
-            );
+            return next(error);
         }
 
 
@@ -1440,18 +1498,23 @@ app.listen(
     () => {
 
         console.log("");
+
         console.log(
             "╔════════════════════════════════════╗"
         );
+
         console.log(
             "║   ApolloMusic API - YouTube        ║"
         );
+
         console.log(
-            "║   Versão 0.5.0                     ║"
+            "║   Versão 0.6.0                     ║"
         );
+
         console.log(
             "╚════════════════════════════════════╝"
         );
+
         console.log("");
 
         console.log(
@@ -1468,6 +1531,10 @@ app.listen(
 
         console.log(
             "✓ Scanner de playlists habilitado"
+        );
+
+        console.log(
+            "✓ Paginação habilitada"
         );
 
         console.log(
