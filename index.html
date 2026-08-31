@@ -23,10 +23,6 @@
     <title>ApolloMusic — YouTube</title>
 
 
-    <!-- =====================================================
-         FONTES
-    ====================================================== -->
-
     <link
         rel="preconnect"
         href="https://fonts.googleapis.com"
@@ -43,11 +39,6 @@
         rel="stylesheet"
     >
 
-
-    <!-- =====================================================
-         CSS
-    ====================================================== -->
-
     <link
         rel="stylesheet"
         href="style.css"
@@ -60,7 +51,7 @@
 
 
     <!-- =====================================================
-         SPLASH SCREEN
+         SPLASH
     ====================================================== -->
 
     <div
@@ -69,7 +60,6 @@
     >
 
         <div class="splash-content">
-
 
             <div class="splash-logo">
 
@@ -83,11 +73,9 @@
 
             </div>
 
-
             <div class="splash-version">
                 YOUTUBE PLAYER
             </div>
-
 
             <div class="splash-loader">
 
@@ -98,11 +86,9 @@
 
             </div>
 
-
             <p id="splash-status">
                 Inicializando...
             </p>
-
 
             <div class="splash-author">
 
@@ -123,7 +109,7 @@
 
 
     <!-- =====================================================
-         APPLICATION
+         APP
     ====================================================== -->
 
     <main class="app">
@@ -135,14 +121,11 @@
 
         <header class="header">
 
-
             <div class="brand">
-
 
                 <div class="brand-mark">
                     A
                 </div>
-
 
                 <div class="brand-info">
 
@@ -159,7 +142,6 @@
             </div>
 
 
-
             <div class="status-area">
 
                 <span
@@ -172,7 +154,6 @@
                 </span>
 
             </div>
-
 
         </header>
 
@@ -189,7 +170,6 @@
 
 
             <div class="player-header">
-
 
                 <div>
 
@@ -209,39 +189,94 @@
                     aria-label="Fonte: YouTube"
                 >
 
-                    <span
-                        aria-hidden="true"
-                    ></span>
+                    <span></span>
 
                     YouTube
 
                 </div>
 
+            </div>
+
+
+
+            <!-- =================================================
+                 CAPA
+            ================================================== -->
+
+            <div
+                id="coverArea"
+                class="cover-area"
+            >
+
+                <img
+                    id="nowPlayingCover"
+                    class="now-playing-cover"
+                    src=""
+                    alt="Capa da música"
+                >
+
+
+                <div class="cover-overlay"></div>
+
+
+                <button
+                    id="coverPlayButton"
+                    class="cover-play-button"
+                    type="button"
+                    aria-label="Reproduzir"
+                >
+                    ▶
+                </button>
+
+
+                <div class="cover-gradient"></div>
+
+
+                <div class="cover-information">
+
+                    <div
+                        id="nowPlayingTitle"
+                        class="cover-title"
+                    >
+                        Nenhuma música
+
+                    </div>
+
+
+                    <div
+                        id="nowPlayingArtist"
+                        class="cover-artist"
+                    >
+                        Adicione uma música do YouTube
+
+                    </div>
+
+                </div>
 
             </div>
 
 
 
-            <!-- PLAYER YOUTUBE -->
+            <!-- =================================================
+                 YOUTUBE INVISÍVEL
+            ================================================== -->
 
             <div
                 id="youtubeContainer"
                 class="youtube-container"
+                aria-hidden="true"
             ></div>
 
 
 
             <!-- =================================================
-                 CONTROLES MATERIAL 3 EXPRESSIVE
+                 CONTROLES
             ================================================== -->
 
             <div class="player-controls">
 
 
-                <!-- PROGRESSO -->
-
                 <div class="progress-area">
-
 
                     <span
                         id="currentTime"
@@ -270,12 +305,9 @@
                         0:00
                     </span>
 
-
                 </div>
 
 
-
-                <!-- BOTÕES -->
 
                 <div class="controls-row">
 
@@ -287,11 +319,8 @@
                         aria-label="Música anterior"
                         title="Anterior"
                     >
-                        <span aria-hidden="true">
-                            ⏮
-                        </span>
+                        ⏮
                     </button>
-
 
 
                     <button
@@ -301,11 +330,8 @@
                         aria-label="Reproduzir"
                         title="Reproduzir"
                     >
-                        <span aria-hidden="true">
-                            ▶
-                        </span>
+                        ▶
                     </button>
-
 
 
                     <button
@@ -315,11 +341,8 @@
                         aria-label="Próxima música"
                         title="Próxima"
                     >
-                        <span aria-hidden="true">
-                            ⏭
-                        </span>
+                        ⏭
                     </button>
-
 
 
                     <button
@@ -330,10 +353,7 @@
                         title="Fila"
                     >
 
-                        <span
-                            class="button-icon"
-                            aria-hidden="true"
-                        >
+                        <span class="button-icon">
                             ☰
                         </span>
 
@@ -343,9 +363,7 @@
 
                     </button>
 
-
                 </div>
-
 
             </div>
 
@@ -361,9 +379,7 @@
                 aria-hidden="true"
             >
 
-
                 <div class="queue-header">
-
 
                     <div>
 
@@ -386,7 +402,6 @@
                         Fechar
                     </button>
 
-
                 </div>
 
 
@@ -394,7 +409,6 @@
                     id="queueList"
                     class="queue-list"
                 ></div>
-
 
             </div>
 
@@ -411,9 +425,7 @@
             class="library expressive-card"
         >
 
-
             <div class="library-header">
-
 
                 <div>
 
@@ -427,23 +439,16 @@
 
                 </div>
 
-
                 <div class="section-number">
                     01
                 </div>
 
-
             </div>
 
 
-
-            <!-- INPUT EXPRESSIVE -->
-
             <div class="youtube-input">
 
-
                 <div class="input-wrap">
-
 
                     <span
                         class="input-icon"
@@ -451,7 +456,6 @@
                     >
                         ▶
                     </span>
-
 
                     <input
                         id="youtubeSearch"
@@ -463,9 +467,7 @@
                         aria-label="Link do YouTube"
                     >
 
-
                 </div>
-
 
 
                 <button
@@ -478,44 +480,33 @@
                         Adicionar
                     </span>
 
-                    <strong
-                        aria-hidden="true"
-                    >
+                    <strong>
                         →
                     </strong>
 
                 </button>
 
-
             </div>
 
-
-
-            <!-- RESULTADOS -->
 
             <div
                 id="youtubeResults"
                 class="youtube-results"
             ></div>
 
-
         </section>
 
 
 
         <!-- =================================================
-             INFO EXPRESSIVE
+             INFO
         ================================================== -->
 
         <section class="quick-info">
 
-
             <div class="info-chip">
 
-                <span
-                    class="chip-icon"
-                    aria-hidden="true"
-                >
+                <span class="chip-icon">
                     ♪
                 </span>
 
@@ -528,10 +519,7 @@
 
             <div class="info-chip">
 
-                <span
-                    class="chip-icon"
-                    aria-hidden="true"
-                >
+                <span class="chip-icon">
                     ♫
                 </span>
 
@@ -544,10 +532,7 @@
 
             <div class="info-chip">
 
-                <span
-                    class="chip-icon"
-                    aria-hidden="true"
-                >
+                <span class="chip-icon">
                     ◉
                 </span>
 
@@ -556,7 +541,6 @@
                 </span>
 
             </div>
-
 
         </section>
 
@@ -568,31 +552,25 @@
 
         <footer class="footer">
 
-
             <span>
                 APOLLOMUSIC
             </span>
 
-
-            <i aria-hidden="true">
+            <i>
                 •
             </i>
-
 
             <span>
                 YOUTUBE
             </span>
 
-
-            <i aria-hidden="true">
+            <i>
                 •
             </i>
-
 
             <span>
                 @FOFOXUTO
             </span>
-
 
         </footer>
 
@@ -602,11 +580,12 @@
 
 
     <!-- =====================================================
-         JAVASCRIPT
+         YOUTUBE IFRAME API
     ====================================================== -->
 
-    <script src="app.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
 
+    <script src="app.js"></script>
 
 </body>
 
