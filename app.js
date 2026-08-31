@@ -9,7 +9,7 @@
         ↓
    parseYouTubeUrl()
         ↓
-   playlistItems
+   playlistItems / videoId
         ↓
    queue[]
         ↓
@@ -665,32 +665,6 @@ function normalizePlaylistItem(
    MONTA QUEUE DA PLAYLIST
 ========================================================= */
 
-/*
- * Transforma:
- *
- * playlistItems[]
- *
- * em:
- *
- * queue[]
- *
- * Exemplo:
- *
- * queue = [
- *
- *   {
- *      id: "abc123",
- *      title: "Música",
- *      artist: "Artista",
- *      album: "Álbum",
- *      cover: "..."
- *   },
- *
- *   ...
- *
- * ]
- */
-
 function buildQueueFromPlaylist(
     playlistItems
 ) {
@@ -710,6 +684,56 @@ function buildQueueFromPlaylist(
             normalizePlaylistItem
         )
         .filter(Boolean);
+}
+
+
+/* =========================================================
+   REMOVE DUPLICADOS DA PLAYLIST
+========================================================= */
+
+function removeDuplicateTracks(
+    tracks
+) {
+
+    if (
+        !Array.isArray(tracks)
+    ) {
+
+        return [];
+    }
+
+
+    const seen =
+        new Set();
+
+
+    return tracks.filter(
+        track => {
+
+            if (
+                !track?.id
+            ) {
+
+                return false;
+            }
+
+
+            if (
+                seen.has(track.id)
+            ) {
+
+                return false;
+            }
+
+
+            seen.add(
+                track.id
+            );
+
+
+            return true;
+        }
+    );
 }
 
 
@@ -1032,20 +1056,6 @@ async function ensureYouTubePlayer() {
    CARREGA VÍDEO DA QUEUE
 ========================================================= */
 
-/*
- * Essa é a parte principal da arquitetura.
- *
- * queue[currentTrack].id
- *
- * ↓
- *
- * YouTube IFrame API
- *
- * ↓
- *
- * loadVideoById()
- */
-
 async function loadQueueTrack() {
 
     const track =
@@ -1096,12 +1106,6 @@ async function loadQueueTrack() {
    NOW PLAYING
 ========================================================= */
 
-/*
- * Se futuramente existir uma área
- * de "tocando agora", ela pode usar
- * esses dados.
- */
-
 function updateNowPlaying(
     track
 ) {
@@ -1111,11 +1115,6 @@ function updateNowPlaying(
         return;
     }
 
-
-    /*
-     * Mantemos compatibilidade com
-     * possíveis elementos futuros.
-     */
 
     const title =
         document.getElementById(
@@ -1203,6 +1202,7 @@ function handlePlayerStateChange(
                 false
             );
 
+
             setStatus(
                 "Pausado."
             );
@@ -1283,8 +1283,9 @@ function handleYouTubeError(
 
 
     /*
-     * Se houver mais músicas,
-     * tenta continuar a queue.
+     * Se o vídeo atual estiver com erro,
+     * tenta avançar para o próximo item
+     * da queue do ApolloMusic.
      */
 
     if (
@@ -1292,7 +1293,11 @@ function handleYouTubeError(
     ) {
 
         setTimeout(
-            () => nextTrack(),
+            () => {
+
+                nextTrack();
+
+            },
             900
         );
     }
@@ -1313,19 +1318,14 @@ async function processYouTubePlaylist(
     );
 
 
-    let response = null;
+    let response =
+        null;
 
 
     /*
-     * Primeiro tentamos o backend.
-     *
-     * Ele pode fornecer:
-     *
-     * response.playlistItems
-     * response.items
-     * response.tracks
-     *
-     * dependendo da implementação.
+     * =====================================================
+     * 1. TENTA O BACKEND
+     * =====================================================
      */
 
     try {
@@ -1344,6 +1344,12 @@ async function processYouTubePlaylist(
                 }
             );
 
+
+        console.log(
+            "[ApolloMusic] Resposta da playlist:",
+            response
+        );
+
     } catch (error) {
 
         console.warn(
@@ -1354,8 +1360,9 @@ async function processYouTubePlaylist(
 
 
     /*
-     * Aceita vários formatos
-     * possíveis da resposta.
+     * =====================================================
+     * 2. EXTRAI ITENS DO BACKEND
+     * =====================================================
      */
 
     const playlistItems =
@@ -1373,9 +1380,23 @@ async function processYouTubePlaylist(
 
 
     /*
-     * Se o backend não retornou
-     * as músicas, usamos a própria
-     * YouTube IFrame API como fallback.
+     * Remove IDs duplicados.
+     */
+
+    playlistQueue =
+        removeDuplicateTracks(
+            playlistQueue
+        );
+
+
+    /*
+     * =====================================================
+     * 3. FALLBACK PARA YOUTUBE IFRAME API
+     * =====================================================
+     *
+     * Caso o backend não tenha retornado
+     * os vídeos, pegamos os IDs diretamente
+     * da playlist através do player.
      */
 
     if (
@@ -1383,7 +1404,7 @@ async function processYouTubePlaylist(
     ) {
 
         setStatus(
-            "Carregando músicas da playlist..."
+            "Obtendo músicas da playlist..."
         );
 
 
@@ -1391,9 +1412,40 @@ async function processYouTubePlaylist(
             await ensureYouTubePlayer();
 
 
+        if (
+            !player ||
+            typeof player.cuePlaylist !==
+            "function"
+        ) {
+
+            throw new Error(
+                "O player do YouTube não consegue carregar playlists."
+            );
+        }
+
+
         /*
-         * Carrega a playlist no player
-         * apenas para descobrir os IDs.
+         * Para evitar que uma playlist anterior
+         * interfira na obtenção dos IDs.
+         */
+
+        try {
+
+            player.stopVideo();
+
+        } catch {
+            /* ignora */
+        }
+
+
+        /*
+         * Carrega a playlist no player.
+         *
+         * IMPORTANTE:
+         * Não usamos a playlist interna do YouTube
+         * para tocar as músicas.
+         *
+         * Usamos somente para obter os IDs.
          */
 
         player.cuePlaylist({
@@ -1410,43 +1462,88 @@ async function processYouTubePlaylist(
 
 
         /*
-         * Espera a API preencher
+         * Espera o YouTube preencher
          * getPlaylist().
          */
 
-        await waitForYouTubePlaylist(
-            player
-        );
-
-
         const ids =
-            typeof player.getPlaylist ===
-            "function"
-                ? player.getPlaylist()
-                : [];
+            await waitForYouTubePlaylist(
+                player,
+                10000
+            );
+
+
+        if (
+            !Array.isArray(ids) ||
+            ids.length === 0
+        ) {
+
+            throw new Error(
+                "O YouTube não retornou os vídeos dessa playlist."
+            );
+        }
+
+
+        /*
+         * Transforma os IDs em itens
+         * da queue do ApolloMusic.
+         */
+
+        playlistQueue =
+            ids
+                .filter(Boolean)
+                .map(
+                    id => {
+
+                        const cleanId =
+                            String(id)
+                                .replace(
+                                    /[^a-zA-Z0-9_-]/g,
+                                    ""
+                                )
+                                .slice(0, 20);
+
+
+                        if (!cleanId) {
+
+                            return null;
+                        }
+
+
+                        return {
+
+                            id:
+                                cleanId,
+
+                            title:
+                                "Vídeo do YouTube",
+
+                            artist:
+                                "YouTube",
+
+                            album:
+                                "",
+
+                            cover:
+                                `https://i.ytimg.com/vi/${cleanId}/hqdefault.jpg`
+                        };
+                    }
+                )
+                .filter(Boolean);
 
 
         playlistQueue =
-            ids.map(
-                id => ({
-
-                    id,
-
-                    title:
-                        "Vídeo do YouTube",
-
-                    artist:
-                        "YouTube",
-
-                    album:
-                        "",
-
-                    cover:
-                        `https://i.ytimg.com/vi/${id}/hqdefault.jpg`
-                })
+            removeDuplicateTracks(
+                playlistQueue
             );
     }
 
+
+    /*
+     * =====================================================
+     * 4. VALIDAÇÃO
+     * =====================================================
+     */
 
     if (
         playlistQueue.length === 0
@@ -1459,19 +1556,13 @@ async function processYouTubePlaylist(
 
 
     /*
-     * AQUI acontece a mágica:
-     *
-     * playlistItems
-     *       ↓
-     * queue[]
+     * =====================================================
+     * 5. ADICIONA À QUEUE
+     * =====================================================
      */
 
-    const oldQueue =
-        queue;
-
-
     const wasEmpty =
-        oldQueue.length === 0;
+        queue.length === 0;
 
 
     if (wasEmpty) {
@@ -1490,12 +1581,24 @@ async function processYouTubePlaylist(
     }
 
 
+    /*
+     * Guarda a playlist ativa.
+     */
+
     activeYouTubePlaylist =
         parsed.playlistId;
 
 
+    /*
+     * Atualiza interface.
+     */
+
     renderQueue();
 
+
+    /*
+     * Mensagem de status.
+     */
 
     setStatus(
         wasEmpty
@@ -1505,8 +1608,9 @@ async function processYouTubePlaylist(
 
 
     /*
-     * Se a fila estava vazia,
-     * começa automaticamente.
+     * =====================================================
+     * 6. COMEÇA A PRIMEIRA MÚSICA
+     * =====================================================
      */
 
     if (wasEmpty) {
@@ -1522,7 +1626,7 @@ async function processYouTubePlaylist(
 
 function waitForYouTubePlaylist(
     player,
-    timeout = 8000
+    timeout = 10000
 ) {
 
     return new Promise(resolve => {
@@ -1547,24 +1651,48 @@ function waitForYouTubePlaylist(
                     playlist.length > 0
                 ) {
 
+                    console.log(
+                        "[ApolloMusic] Playlist do YouTube:",
+                        playlist.length,
+                        "vídeo(s)"
+                    );
+
+
                     resolve(
                         playlist
                     );
 
+
                     return;
                 }
 
-            } catch {
-                /* ignora */
+            } catch (error) {
+
+                console.warn(
+                    "[ApolloMusic] getPlaylist:",
+                    error
+                );
             }
 
+
+            /*
+             * Timeout.
+             */
 
             if (
                 Date.now() - started >=
                 timeout
             ) {
 
-                resolve([]);
+                console.warn(
+                    "[ApolloMusic] Timeout ao obter playlist."
+                );
+
+
+                resolve(
+                    []
+                );
+
 
                 return;
             }
@@ -1664,6 +1792,7 @@ async function processYouTubeUrl(
                 "Não foi possível carregar a playlist."
             );
 
+
             return;
         }
 
@@ -1706,14 +1835,15 @@ async function processYouTubeUrl(
     );
 
 
-    let metadata = {};
+    let metadata =
+        {};
 
 
     /*
      * Metadados são opcionais.
      *
-     * O player funciona mesmo
-     * se a API estiver offline.
+     * O player continua funcionando
+     * mesmo se a API estiver offline.
      */
 
     try {
@@ -1859,9 +1989,35 @@ async function playCurrentTrack() {
         await ensureYouTubePlayer();
 
 
+        if (
+            !youtubePlayer ||
+            typeof youtubePlayer.loadVideoById !==
+            "function"
+        ) {
+
+            throw new Error(
+                "YouTube Player ainda não está pronto."
+            );
+        }
+
+
         /*
-         * O ID da queue é o ID
-         * usado pelo YouTube.
+         * =================================================
+         * IMPORTANTE:
+         *
+         * A queue do ApolloMusic é a fonte
+         * principal da reprodução.
+         *
+         * Não usamos:
+         *
+         * player.nextVideo()
+         * player.previousVideo()
+         *
+         * nem deixamos o YouTube controlar
+         * a ordem.
+         *
+         * Apenas mandamos o ID atual.
+         * =================================================
          */
 
         youtubePlayer.loadVideoById(
@@ -1958,13 +2114,17 @@ function nextTrack() {
 
 
     /*
-     * Arquitetura clássica:
-     *
-     * currentTrack++
-     *
-     * se passou do fim,
-     * volta para zero.
+     * Para evitar chamadas duplicadas
+     * enquanto uma troca ainda está ocorrendo.
      */
+
+    if (
+        changingTrack
+    ) {
+
+        return;
+    }
+
 
     currentTrack++;
 
@@ -1997,6 +2157,14 @@ function previousTrack() {
     }
 
 
+    if (
+        changingTrack
+    ) {
+
+        return;
+    }
+
+
     currentTrack--;
 
 
@@ -2020,12 +2188,20 @@ function previousTrack() {
 function handleTrackEnded() {
 
     /*
-     * Agora NÃO deixamos o YouTube
-     * controlar a fila.
+     * O YouTube terminou a música.
      *
-     * A queue do ApolloMusic é
-     * quem manda.
+     * Agora quem decide a próxima
+     * música é exclusivamente a queue
+     * do ApolloMusic.
      */
+
+    if (
+        !queue.length
+    ) {
+
+        return;
+    }
+
 
     nextTrack();
 }
@@ -2348,7 +2524,9 @@ function renderQueue() {
 
 
             /*
+             * =================================================
              * CAPA
+             * =================================================
              */
 
             const image =
@@ -2361,13 +2539,19 @@ function renderQueue() {
                 "";
 
 
+            image.loading =
+                "lazy";
+
+
             image.src =
                 track.cover ||
                 `https://i.ytimg.com/vi/${track.id}/hqdefault.jpg`;
 
 
             /*
+             * =================================================
              * INFORMAÇÕES
+             * =================================================
              */
 
             const info =
@@ -2437,7 +2621,9 @@ function renderQueue() {
 
 
             /*
+             * =================================================
              * CLICAR NA MÚSICA
+             * =================================================
              */
 
             item.addEventListener(
@@ -2460,6 +2646,15 @@ function renderQueue() {
                     }
 
 
+                    if (
+                        index < 0 ||
+                        index >= queue.length
+                    ) {
+
+                        return;
+                    }
+
+
                     currentTrack =
                         index;
 
@@ -2475,6 +2670,8 @@ function renderQueue() {
         }
     );
 
+
+    updateQueueSelection();
 
     updateControls();
 }
