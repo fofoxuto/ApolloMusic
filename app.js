@@ -1,7 +1,7 @@
 /* =========================================================
    APOLLOMUSIC - YOUTUBE VERSION
    YouTube Player — Vanilla JS
-   Versão com suporte a YouTube
+   Material 3 Expressive Controls
 ========================================================= */
 
 
@@ -20,10 +20,15 @@ const SPLASH_SPEED = 0.6;
    ESTADO
 ========================================================= */
 
-let youtubeUrl = null;
-let iframePlayer = null;
+let queue = [];
+let currentTrack = 0;
 
+let youtubePlayer = null;
+let youtubeApiReady = false;
+
+let progressTimer = null;
 let changingTrack = false;
+let autoplayBlocked = false;
 
 
 /* =========================================================
@@ -53,14 +58,28 @@ function cacheElements() {
         youtubeSearch: "youtubeSearch",
         searchYoutube: "searchYoutube",
         youtubeResults: "youtubeResults",
-        youtubeContainer: "youtubeContainer"
+        youtubeContainer: "youtubeContainer",
+
+        play: "playButton",
+        next: "nextButton",
+        prev: "prevButton",
+
+        progressBar: "progressBar",
+        currentTime: "currentTime",
+        duration: "duration",
+
+        queueButton: "queueButton",
+        queuePanel: "queuePanel",
+        closeQueue: "closeQueue",
+        queueList: "queueList"
+
     };
 
 
-    for (const [
-        key,
-        id
-    ] of Object.entries(ids)) {
+    for (
+        const [key, id]
+        of Object.entries(ids)
+    ) {
 
         elements[key] = $(id);
     }
@@ -92,6 +111,39 @@ function wait(ms) {
             ms / SPLASH_SPEED
         );
     });
+}
+
+
+function formatTime(seconds) {
+
+    seconds =
+        Number(seconds);
+
+
+    if (
+        !Number.isFinite(seconds) ||
+        seconds < 0
+    ) {
+
+        return "0:00";
+    }
+
+
+    const minutes =
+        Math.floor(
+            seconds / 60
+        );
+
+    const remaining =
+        Math.floor(
+            seconds % 60
+        );
+
+
+    return (
+        `${minutes}:` +
+        `${String(remaining).padStart(2, "0")}`
+    );
 }
 
 
@@ -139,7 +191,7 @@ async function showSplashScreen() {
 
     updateSplash(
         60,
-        "Preparando player..."
+        "Preparando YouTube..."
     );
 
     await wait(400);
@@ -277,12 +329,352 @@ async function checkAPI() {
 
 
 /* =========================================================
-   VALIDAÇÃO E PROCESSAMENTO DE URL YOUTUBE
+   YOUTUBE IFRAME API
 ========================================================= */
 
-async function processYouTubeUrl(url) {
+function loadYouTubeAPI() {
 
-    url = String(url || "").trim();
+    return new Promise(resolve => {
+
+        if (
+            window.YT &&
+            window.YT.Player
+        ) {
+
+            youtubeApiReady = true;
+
+            resolve();
+
+            return;
+        }
+
+
+        const previousCallback =
+            window.onYouTubeIframeAPIReady;
+
+
+        window.onYouTubeIframeAPIReady =
+            () => {
+
+                youtubeApiReady = true;
+
+
+                if (
+                    typeof previousCallback ===
+                    "function"
+                ) {
+
+                    previousCallback();
+                }
+
+
+                resolve();
+            };
+
+
+        const existing =
+            document.querySelector(
+                'script[src="https://www.youtube.com/iframe_api"]'
+            );
+
+
+        if (existing) {
+            return;
+        }
+
+
+        const script =
+            document.createElement(
+                "script"
+            );
+
+
+        script.src =
+            "https://www.youtube.com/iframe_api";
+
+
+        script.async = true;
+
+
+        document.head.appendChild(
+            script
+        );
+    });
+}
+
+
+/* =========================================================
+   CRIA PLAYER
+========================================================= */
+
+async function createYouTubePlayer(
+    videoId = null,
+    playlistId = null
+) {
+
+    await loadYouTubeAPI();
+
+
+    const container =
+        elements.youtubeContainer;
+
+
+    if (!container) {
+        return;
+    }
+
+
+    container.innerHTML = "";
+
+
+    const playerElement =
+        document.createElement(
+            "div"
+        );
+
+
+    playerElement.id =
+        "youtube-player";
+
+
+    container.appendChild(
+        playerElement
+    );
+
+
+    return new Promise(resolve => {
+
+        const options = {
+
+            width: "100%",
+
+            height: "400",
+
+            playerVars: {
+
+                autoplay: 1,
+
+                controls: 1,
+
+                rel: 0,
+
+                modestbranding: 1,
+
+                playsinline: 1,
+
+                enablejsapi: 1
+            },
+
+
+            events: {
+
+                onReady: event => {
+
+                    youtubePlayer =
+                        event.target;
+
+
+                    updateControls();
+
+                    updateProgress();
+
+                    resolve(
+                        youtubePlayer
+                    );
+                },
+
+
+                onStateChange:
+                    handlePlayerStateChange,
+
+
+                onError:
+                    handleYouTubeError
+            }
+        };
+
+
+        if (videoId) {
+
+            options.videoId =
+                videoId;
+
+        }
+
+
+        youtubePlayer =
+            new YT.Player(
+                "youtube-player",
+                options
+            );
+
+
+        if (
+            playlistId
+        ) {
+
+            setTimeout(() => {
+
+                if (
+                    youtubePlayer &&
+                    typeof youtubePlayer.loadPlaylist ===
+                    "function"
+                ) {
+
+                    youtubePlayer.loadPlaylist({
+                        list:
+                            playlistId,
+                        listType:
+                            "playlist",
+                        index: 0
+                    });
+                }
+
+            }, 300);
+        }
+
+    });
+}
+
+
+/* =========================================================
+   PLAYER STATE
+========================================================= */
+
+function handlePlayerStateChange(
+    event
+) {
+
+    if (!window.YT) {
+        return;
+    }
+
+
+    switch (event.data) {
+
+        case YT.PlayerState.PLAYING:
+
+            autoplayBlocked = false;
+
+            startProgressTimer();
+
+            updatePlayButton(
+                true
+            );
+
+            setStatus(
+                "Reproduzindo."
+            );
+
+            updateProgress();
+
+            break;
+
+
+        case YT.PlayerState.PAUSED:
+
+            stopProgressTimer();
+
+            updatePlayButton(
+                false
+            );
+
+            setStatus(
+                "Pausado."
+            );
+
+            break;
+
+
+        case YT.PlayerState.ENDED:
+
+            stopProgressTimer();
+
+            handleTrackEnded();
+
+            break;
+
+
+        case YT.PlayerState.BUFFERING:
+
+            setStatus(
+                "Carregando..."
+            );
+
+            break;
+
+
+        case YT.PlayerState.CUED:
+
+            updateProgress();
+
+            break;
+    }
+
+
+    updateControls();
+}
+
+
+/* =========================================================
+   ERROS YOUTUBE
+========================================================= */
+
+function handleYouTubeError(
+    event
+) {
+
+    console.error(
+        "[ApolloMusic] YouTube:",
+        event.data
+    );
+
+
+    const errors = {
+
+        2:
+            "URL do YouTube inválida.",
+
+        5:
+            "Erro no player do YouTube.",
+
+        100:
+            "Vídeo não encontrado.",
+
+        101:
+            "Este vídeo não permite reprodução incorporada.",
+
+        150:
+            "Este vídeo não permite reprodução incorporada."
+    };
+
+
+    setStatus(
+        errors[event.data] ||
+        "Erro ao reproduzir o vídeo."
+    );
+
+
+    setTimeout(
+        () => nextTrack(),
+        900
+    );
+}
+
+
+/* =========================================================
+   PROCESSAMENTO DA URL
+========================================================= */
+
+async function processYouTubeUrl(
+    url
+) {
+
+    url =
+        String(
+            url || ""
+        ).trim();
+
 
     if (!url) {
 
@@ -295,25 +687,47 @@ async function processYouTubeUrl(url) {
         return;
     }
 
-    setStatus("Validando link do YouTube...");
 
-    if (elements.youtubeResults) {
-        elements.youtubeResults.innerHTML = "";
+    if (
+        !/^https?:\/\//i.test(url)
+    ) {
+
+        setStatus(
+            "Cole um link válido do YouTube."
+        );
+
+        return;
     }
+
+
+    setStatus(
+        "Validando link do YouTube..."
+    );
+
 
     try {
 
-        // Envia a URL para o servidor fazer debug e validação
         const response =
             await api(
                 "/api/youtube/process",
                 {
                     method: "POST",
-                    body: JSON.stringify({ url })
+
+                    body:
+                        JSON.stringify({
+                            url
+                        })
                 }
             );
 
-        if (!response.processed || !response.videoId && !response.playlistId) {
+
+        if (
+            !response.processed ||
+            (
+                !response.videoId &&
+                !response.playlistId
+            )
+        ) {
 
             setStatus(
                 "Link do YouTube inválido. Tente novamente."
@@ -322,19 +736,78 @@ async function processYouTubeUrl(url) {
             return;
         }
 
-        youtubeUrl = url;
 
-        // Renderiza o iframe
-        renderYouTubeIframe(
-            response.videoId,
-            response.playlistId
+        /*
+         * Adiciona à fila em vez de substituir
+         * automaticamente tudo.
+         */
+
+        const item = {
+
+            url,
+
+            videoId:
+                response.videoId ||
+                null,
+
+            playlistId:
+                response.playlistId ||
+                null,
+
+            title:
+                response.title ||
+                "Vídeo do YouTube",
+
+            thumbnail:
+                response.thumbnail ||
+                (
+                    response.videoId
+                        ? `https://i.ytimg.com/vi/${response.videoId}/hqdefault.jpg`
+                        : ""
+                )
+        };
+
+
+        const wasEmpty =
+            queue.length === 0;
+
+
+        queue.push(
+            item
         );
 
-        setStatus(
-            response.videoId
-                ? "Vídeo carregado. Aproveite!"
-                : "Playlist carregada. Aproveite!"
-        );
+
+        renderQueue();
+
+
+        /*
+         * Se for o primeiro item,
+         * começa automaticamente.
+         */
+
+        if (wasEmpty) {
+
+            currentTrack = 0;
+
+            await playCurrentTrack();
+
+        } else {
+
+            setStatus(
+                `Adicionado à fila. ${queue.length} itens na fila.`
+            );
+        }
+
+
+        /*
+         * Limpa o campo depois de adicionar.
+         */
+
+        if (elements.youtubeSearch) {
+
+            elements.youtubeSearch.value =
+                "";
+        }
 
     } catch (error) {
 
@@ -342,6 +815,7 @@ async function processYouTubeUrl(url) {
             "[ApolloMusic] Processamento:",
             error
         );
+
 
         setStatus(
             error.message ||
@@ -352,40 +826,739 @@ async function processYouTubeUrl(url) {
 
 
 /* =========================================================
-   RENDERIZAÇÃO DO IFRAME
+   REPRODUZ FAIXA ATUAL
 ========================================================= */
 
-function renderYouTubeIframe(videoId, playlistId) {
+async function playCurrentTrack() {
 
-    const container = elements.youtubeContainer;
+    if (changingTrack) {
+        return;
+    }
+
+
+    const track =
+        queue[currentTrack];
+
+
+    if (!track) {
+
+        updateControls();
+
+        return;
+    }
+
+
+    changingTrack =
+        true;
+
+
+    stopProgressTimer();
+
+    resetProgress();
+
+    updateQueueSelection();
+
+    setStatus(
+        "Carregando vídeo..."
+    );
+
+
+    try {
+
+        if (
+            track.playlistId
+        ) {
+
+            /*
+             * Playlist do YouTube.
+             */
+
+            await createYouTubePlayer(
+                null,
+                track.playlistId
+            );
+
+        } else {
+
+            /*
+             * Vídeo individual.
+             */
+
+            await createYouTubePlayer(
+                track.videoId,
+                null
+            );
+        }
+
+
+        updateQueueSelection();
+
+        updateControls();
+
+
+    } catch (error) {
+
+        console.error(
+            "[ApolloMusic] Player:",
+            error
+        );
+
+
+        setStatus(
+            "Não foi possível carregar o player."
+        );
+
+    } finally {
+
+        changingTrack =
+            false;
+    }
+}
+
+
+/* =========================================================
+   PLAY / PAUSE
+========================================================= */
+
+function togglePlay() {
+
+    if (!youtubePlayer) {
+
+        if (queue.length) {
+
+            playCurrentTrack();
+
+        } else {
+
+            setStatus(
+                "Adicione um vídeo primeiro."
+            );
+        }
+
+        return;
+    }
+
+
+    const state =
+        youtubePlayer.getPlayerState();
+
+
+    if (
+        state ===
+        YT.PlayerState.PLAYING
+    ) {
+
+        youtubePlayer.pauseVideo();
+
+    } else {
+
+        youtubePlayer.playVideo();
+    }
+}
+
+
+/* =========================================================
+   PRÓXIMO
+========================================================= */
+
+function nextTrack() {
+
+    if (!queue.length) {
+        return;
+    }
+
+
+    /*
+     * Se o item atual é uma playlist,
+     * o próprio YouTube controla seus vídeos.
+     */
+
+    const current =
+        queue[currentTrack];
+
+
+    if (
+        current?.playlistId &&
+        youtubePlayer &&
+        typeof youtubePlayer.nextVideo ===
+        "function"
+    ) {
+
+        youtubePlayer.nextVideo();
+
+        return;
+    }
+
+
+    if (
+        currentTrack <
+        queue.length - 1
+    ) {
+
+        currentTrack++;
+
+    } else {
+
+        /*
+         * Volta para o primeiro.
+         */
+
+        currentTrack = 0;
+    }
+
+
+    playCurrentTrack();
+}
+
+
+/* =========================================================
+   ANTERIOR
+========================================================= */
+
+function previousTrack() {
+
+    if (!queue.length) {
+        return;
+    }
+
+
+    const current =
+        queue[currentTrack];
+
+
+    if (
+        current?.playlistId &&
+        youtubePlayer &&
+        typeof youtubePlayer.previousVideo ===
+        "function"
+    ) {
+
+        youtubePlayer.previousVideo();
+
+        return;
+    }
+
+
+    if (
+        currentTrack >
+        0
+    ) {
+
+        currentTrack--;
+
+    } else {
+
+        currentTrack =
+            queue.length - 1;
+    }
+
+
+    playCurrentTrack();
+}
+
+
+/* =========================================================
+   FIM DA FAIXA
+========================================================= */
+
+function handleTrackEnded() {
+
+    const current =
+        queue[currentTrack];
+
+
+    if (
+        current?.playlistId
+    ) {
+
+        /*
+         * O YouTube normalmente
+         * administra o fim da playlist.
+         */
+
+        return;
+    }
+
+
+    nextTrack();
+}
+
+
+/* =========================================================
+   PROGRESSO
+========================================================= */
+
+function startProgressTimer() {
+
+    stopProgressTimer();
+
+
+    progressTimer =
+        setInterval(
+            updateProgress,
+            500
+        );
+}
+
+
+function stopProgressTimer() {
+
+    if (progressTimer) {
+
+        clearInterval(
+            progressTimer
+        );
+
+        progressTimer =
+            null;
+    }
+}
+
+
+function resetProgress() {
+
+    if (elements.progressBar) {
+
+        elements.progressBar.value =
+            0;
+    }
+
+
+    if (elements.currentTime) {
+
+        elements.currentTime.textContent =
+            "0:00";
+    }
+
+
+    if (elements.duration) {
+
+        elements.duration.textContent =
+            "0:00";
+    }
+}
+
+
+function updateProgress() {
+
+    if (
+        !youtubePlayer ||
+        typeof youtubePlayer.getCurrentTime !==
+        "function"
+    ) {
+
+        return;
+    }
+
+
+    let current = 0;
+    let duration = 0;
+
+
+    try {
+
+        current =
+            youtubePlayer.getCurrentTime() ||
+            0;
+
+        duration =
+            youtubePlayer.getDuration() ||
+            0;
+
+    } catch {
+        return;
+    }
+
+
+    if (
+        elements.currentTime
+    ) {
+
+        elements.currentTime.textContent =
+            formatTime(current);
+    }
+
+
+    if (
+        elements.duration
+    ) {
+
+        elements.duration.textContent =
+            formatTime(duration);
+    }
+
+
+    if (
+        elements.progressBar &&
+        duration > 0
+    ) {
+
+        elements.progressBar.value =
+            (
+                current /
+                duration
+            ) * 100;
+    }
+}
+
+
+/* =========================================================
+   SEEK
+========================================================= */
+
+function seekVideo(
+    value
+) {
+
+    if (
+        !youtubePlayer ||
+        typeof youtubePlayer.getDuration !==
+        "function"
+    ) {
+
+        return;
+    }
+
+
+    const duration =
+        youtubePlayer.getDuration();
+
+
+    if (
+        !duration ||
+        !Number.isFinite(duration)
+    ) {
+
+        return;
+    }
+
+
+    const percentage =
+        Number(value) / 100;
+
+
+    youtubePlayer.seekTo(
+        duration * percentage,
+        true
+    );
+}
+
+
+/* =========================================================
+   BOTÃO PLAY
+========================================================= */
+
+function updatePlayButton(
+    playing
+) {
+
+    const button =
+        elements.play;
+
+
+    if (!button) {
+        return;
+    }
+
+
+    button.innerHTML =
+        playing
+            ? "❚❚"
+            : "▶";
+
+
+    button.setAttribute(
+        "aria-label",
+        playing
+            ? "Pausar"
+            : "Reproduzir"
+    );
+}
+
+
+/* =========================================================
+   CONTROLES
+========================================================= */
+
+function updateControls() {
+
+    const hasQueue =
+        queue.length > 0;
+
+
+    if (elements.play) {
+
+        elements.play.disabled =
+            !hasQueue;
+    }
+
+
+    if (elements.next) {
+
+        elements.next.disabled =
+            !hasQueue;
+    }
+
+
+    if (elements.prev) {
+
+        elements.prev.disabled =
+            !hasQueue;
+    }
+
+
+    if (
+        elements.queueButton
+    ) {
+
+        elements.queueButton.disabled =
+            !hasQueue;
+    }
+
+
+    if (!hasQueue) {
+
+        updatePlayButton(
+            false
+        );
+    }
+}
+
+
+/* =========================================================
+   FILA
+========================================================= */
+
+function renderQueue() {
+
+    const container =
+        elements.queueList;
+
 
     if (!container) {
         return;
     }
 
-    container.innerHTML = "";
 
-    let iframeSrc = "";
+    container.innerHTML =
+        "";
 
-    if (videoId) {
-        // Vídeo individual
-        iframeSrc = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-    } else if (playlistId) {
-        // Playlist
-        iframeSrc = `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1`;
+
+    queue.forEach(
+        (track, index) => {
+
+            const item =
+                document.createElement(
+                    "button"
+                );
+
+
+            item.type =
+                "button";
+
+
+            item.className =
+                "queue-item";
+
+
+            if (
+                index ===
+                currentTrack
+            ) {
+
+                item.classList.add(
+                    "current"
+                );
+            }
+
+
+            item.dataset.index =
+                String(index);
+
+
+            const image =
+                document.createElement(
+                    "img"
+                );
+
+
+            image.alt =
+                "";
+
+
+            image.src =
+                track.thumbnail ||
+                (
+                    track.videoId
+                        ? `https://i.ytimg.com/vi/${track.videoId}/hqdefault.jpg`
+                        : ""
+                );
+
+
+            const info =
+                document.createElement(
+                    "div"
+                );
+
+
+            info.className =
+                "queue-item-info";
+
+
+            const title =
+                document.createElement(
+                    "div"
+                );
+
+
+            title.className =
+                "queue-item-title";
+
+
+            title.textContent =
+                track.title ||
+                "Vídeo do YouTube";
+
+
+            const subtitle =
+                document.createElement(
+                    "div"
+                );
+
+
+            subtitle.className =
+                "queue-item-subtitle";
+
+
+            subtitle.textContent =
+                track.playlistId
+                    ? "Playlist do YouTube"
+                    : "YouTube";
+
+
+            info.appendChild(
+                title
+            );
+
+            info.appendChild(
+                subtitle
+            );
+
+
+            item.appendChild(
+                image
+            );
+
+            item.appendChild(
+                info
+            );
+
+
+            item.addEventListener(
+                "click",
+                () => {
+
+                    const index =
+                        Number(
+                            item.dataset.index
+                        );
+
+
+                    if (
+                        !Number.isInteger(
+                            index
+                        )
+                    ) {
+
+                        return;
+                    }
+
+
+                    currentTrack =
+                        index;
+
+
+                    playCurrentTrack();
+                }
+            );
+
+
+            container.appendChild(
+                item
+            );
+        }
+    );
+
+
+    updateControls();
+}
+
+
+function updateQueueSelection() {
+
+    if (!elements.queueList) {
+        return;
     }
 
-    const iframe = document.createElement("iframe");
 
-    iframe.id = "youtube-player";
-    iframe.src = iframeSrc;
-    iframe.width = "100%";
-    iframe.height = "400";
-    iframe.allow = "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture";
-    iframe.allowFullscreen = true;
-    iframe.frameBorder = "0";
+    const items =
+        elements.queueList.querySelectorAll(
+            ".queue-item"
+        );
 
-    container.appendChild(iframe);
+
+    items.forEach(
+        (item, index) => {
+
+            item.classList.toggle(
+                "current",
+                index === currentTrack
+            );
+        }
+    );
+}
+
+
+/* =========================================================
+   ABRIR / FECHAR QUEUE
+========================================================= */
+
+function toggleQueue() {
+
+    if (!elements.queuePanel) {
+        return;
+    }
+
+
+    const visible =
+        elements.queuePanel.classList.toggle(
+            "visible"
+        );
+
+
+    elements.queuePanel.setAttribute(
+        "aria-hidden",
+        String(!visible)
+    );
+}
+
+
+function closeQueue() {
+
+    if (!elements.queuePanel) {
+        return;
+    }
+
+
+    elements.queuePanel.classList.remove(
+        "visible"
+    );
+
+
+    elements.queuePanel.setAttribute(
+        "aria-hidden",
+        "true"
+    );
 }
 
 
@@ -395,7 +1568,13 @@ function renderYouTubeIframe(videoId, playlistId) {
 
 function setupEvents() {
 
-    if (elements.searchYoutube) {
+    /* -----------------------------------------------------
+       BUSCAR
+    ----------------------------------------------------- */
+
+    if (
+        elements.searchYoutube
+    ) {
 
         elements.searchYoutube.addEventListener(
             "click",
@@ -409,7 +1588,13 @@ function setupEvents() {
     }
 
 
-    if (elements.youtubeSearch) {
+    /* -----------------------------------------------------
+       ENTER
+    ----------------------------------------------------- */
+
+    if (
+        elements.youtubeSearch
+    ) {
 
         elements.youtubeSearch.addEventListener(
             "keydown",
@@ -429,6 +1614,95 @@ function setupEvents() {
             }
         );
     }
+
+
+    /* -----------------------------------------------------
+       PLAY
+    ----------------------------------------------------- */
+
+    if (elements.play) {
+
+        elements.play.addEventListener(
+            "click",
+            togglePlay
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       NEXT
+    ----------------------------------------------------- */
+
+    if (elements.next) {
+
+        elements.next.addEventListener(
+            "click",
+            nextTrack
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       PREVIOUS
+    ----------------------------------------------------- */
+
+    if (elements.prev) {
+
+        elements.prev.addEventListener(
+            "click",
+            previousTrack
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       QUEUE
+    ----------------------------------------------------- */
+
+    if (
+        elements.queueButton
+    ) {
+
+        elements.queueButton.addEventListener(
+            "click",
+            toggleQueue
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       FECHAR QUEUE
+    ----------------------------------------------------- */
+
+    if (
+        elements.closeQueue
+    ) {
+
+        elements.closeQueue.addEventListener(
+            "click",
+            closeQueue
+        );
+    }
+
+
+    /* -----------------------------------------------------
+       PROGRESSO
+    ----------------------------------------------------- */
+
+    if (
+        elements.progressBar
+    ) {
+
+        elements.progressBar.addEventListener(
+            "input",
+            event => {
+
+                seekVideo(
+                    event.target.value
+                );
+            }
+        );
+    }
 }
 
 
@@ -441,6 +1715,13 @@ async function init() {
     cacheElements();
 
     setupEvents();
+
+    updateControls();
+
+    resetProgress();
+
+    renderQueue();
+
 
     checkAPI()
         .then(online => {
@@ -470,6 +1751,20 @@ async function init() {
                 "API offline."
             );
         });
+
+
+    /*
+     * Carrega a API do YouTube em background.
+     */
+
+    loadYouTubeAPI()
+        .catch(error => {
+
+            console.error(
+                "[ApolloMusic] YouTube API:",
+                error
+            );
+        });
 }
 
 
@@ -487,6 +1782,7 @@ if (
         () => {
 
             init();
+
             showSplashScreen();
 
         },
@@ -498,5 +1794,6 @@ if (
 } else {
 
     init();
+
     showSplashScreen();
 }
