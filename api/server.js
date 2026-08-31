@@ -4,7 +4,7 @@ const cors = require("cors");
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-const AUDIUS_API = "https://api.audius.co/v1";
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
 
 
 /* =========================================================
@@ -17,7 +17,8 @@ const corsOptions = {
     methods: [
         "GET",
         "HEAD",
-        "OPTIONS"
+        "OPTIONS",
+        "POST"
     ],
 
     allowedHeaders: [
@@ -51,44 +52,124 @@ app.use(express.json());
 
 
 /* =========================================================
-   AUDIUS FETCH
+   LOGGER DEBUG
 ========================================================= */
 
-async function audiusFetch(path, options = {}) {
+function logDebug(message, data = null) {
 
-    const url =
-        `${AUDIUS_API}${path}`;
+    const timestamp = new Date().toISOString();
 
-    const response =
-        await fetch(url, {
+    const logMessage = `[${timestamp}] [DEBUG] ${message}`;
 
-            ...options,
+    console.log(logMessage);
 
-            headers: {
-                Accept:
-                    "application/json",
-
-                ...(process.env.AUDIUS_API_KEY
-                    ? {
-                        "api-key":
-                            process.env.AUDIUS_API_KEY
-                    }
-                    : {}),
-
-                ...(options.headers || {})
-            }
-        });
+    if (data) {
+        console.log(JSON.stringify(data, null, 2));
+    }
+}
 
 
-    if (!response.ok) {
+function logError(message, error = null) {
 
-        throw new Error(
-            `Audius HTTP ${response.status}`
-        );
+    const timestamp = new Date().toISOString();
+
+    const logMessage = `[${timestamp}] [ERROR] ${message}`;
+
+    console.error(logMessage);
+
+    if (error) {
+        console.error(error);
+    }
+}
+
+
+/* =========================================================
+   YOUTUBE UTILITIES
+========================================================= */
+
+/**
+ * Extrai o ID do vídeo de uma URL do YouTube
+ */
+function extractVideoId(url) {
+
+    try {
+
+        const urlObj = new URL(url);
+
+        // youtube.com/watch?v=VIDEO_ID
+        if (urlObj.hostname.includes('youtube.com')) {
+            return urlObj.searchParams.get('v');
+        }
+
+        // youtu.be/VIDEO_ID
+        if (urlObj.hostname.includes('youtu.be')) {
+            return urlObj.pathname.slice(1);
+        }
+
+        // youtube.com/embed/VIDEO_ID
+        if (urlObj.pathname.includes('/embed/')) {
+            return urlObj.pathname.split('/embed/')[1];
+        }
+
+    } catch (error) {
+        logError("Erro ao extrair ID do vídeo", error);
     }
 
+    return null;
+}
 
-    return response;
+
+/**
+ * Extrai o ID da playlist de uma URL do YouTube
+ */
+function extractPlaylistId(url) {
+
+    try {
+
+        const urlObj = new URL(url);
+
+        // youtube.com/playlist?list=PLAYLIST_ID
+        if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('list')) {
+            return urlObj.searchParams.get('list');
+        }
+
+        // youtube.com/watch?v=VIDEO_ID&list=PLAYLIST_ID
+        if (urlObj.searchParams.has('list')) {
+            return urlObj.searchParams.get('list');
+        }
+
+    } catch (error) {
+        logError("Erro ao extrair ID da playlist", error);
+    }
+
+    return null;
+}
+
+
+/**
+ * Valida se uma URL é válida do YouTube
+ */
+function isValidYouTubeUrl(url) {
+
+    try {
+
+        const urlObj = new URL(url);
+
+        const validHosts = [
+            'youtube.com',
+            'www.youtube.com',
+            'youtu.be',
+            'www.youtu.be',
+            'm.youtube.com'
+        ];
+
+        return validHosts.some(host =>
+            urlObj.hostname.includes(host)
+        );
+
+    } catch (error) {
+        return false;
+    }
 }
 
 
@@ -98,19 +179,24 @@ async function audiusFetch(path, options = {}) {
 
 app.get("/", (req, res) => {
 
+    logDebug("GET / - Requisição raiz recebida");
+
     res.json({
 
         name:
-            "ApolloMusic API",
+            "ApolloMusic API - YouTube",
 
         version:
-            "0.2.0",
+            "0.3.0",
 
         status:
             "online",
 
         cors:
-            "enabled"
+            "enabled",
+
+        type:
+            "youtube-player"
     });
 });
 
@@ -121,359 +207,141 @@ app.get("/", (req, res) => {
 
 app.get("/api/health", (req, res) => {
 
+    logDebug("GET /api/health - Health check recebido");
+
     res.json({
 
         status:
             "ok",
 
         service:
-            "apollo-music-api",
+            "apollo-music-youtube-api",
 
         cors:
-            "enabled"
+            "enabled",
+
+        timestamp:
+            new Date().toISOString()
     });
 });
 
 
 /* =========================================================
-   AUDIUS — SEARCH
+   YOUTUBE — VALIDATE URL
 ========================================================= */
 
-app.get(
-    "/api/audius/search",
-    async (req, res) => {
+app.post(
+    "/api/youtube/validate",
+    (req, res) => {
 
-        const query =
-            String(
-                req.query.q || ""
-            ).trim();
+        const { url } = req.body;
 
+        logDebug("POST /api/youtube/validate", { url });
 
-        if (!query) {
+        if (!url) {
+
+            logError("URL não fornecida");
 
             return res.status(400).json({
 
                 error:
-                    "Informe o que deseja pesquisar."
+                    "URL é obrigatória.",
+
+                valid:
+                    false
             });
         }
 
+        const valid = isValidYouTubeUrl(url);
+        const videoId = extractVideoId(url);
+        const playlistId = extractPlaylistId(url);
 
-        try {
+        logDebug("Validação concluída", {
+            url,
+            valid,
+            videoId,
+            playlistId
+        });
 
-            const limit =
-                Math.min(
-                    Math.max(
-                        Number(
-                            req.query.limit || 20
-                        ),
-                        1
-                    ),
-                    50
-                );
+        res.json({
 
+            url,
 
-            const params =
-                new URLSearchParams({
+            valid,
 
-                    query,
+            videoId:
+                videoId || null,
 
-                    limit:
-                        String(limit),
+            playlistId:
+                playlistId || null,
 
-                    sort_method:
-                        "relevant"
-                });
-
-
-            const response =
-                await audiusFetch(
-                    `/tracks/search?${params}`
-                );
-
-
-            const data =
-                await response.json();
-
-
-            const tracks =
-                Array.isArray(data.data)
-                    ? data.data.map(track => ({
-
-                        id:
-                            track.id || "",
-
-                        title:
-                            track.title || "Sem título",
-
-                        artist:
-                            track.user?.name ||
-                            "Artista desconhecido",
-
-                        duration:
-                            Number(
-                                track.duration
-                            ) || 0,
-
-                        artwork:
-                            track.artwork?._480x480 ||
-                            track.artwork?._1000x1000 ||
-                            "",
-
-                        genre:
-                            track.genre || "",
-
-                        mood:
-                            track.mood || "",
-
-                        permalink:
-                            track.permalink || "",
-
-                        streamable:
-                            track.isStreamable === true ||
-                            track.isStreamable === "true",
-
-                        downloadable:
-                            track.downloadable === true
-
-                    }))
-                    : [];
-
-
-            res.json({
-
-                source:
-                    "audius",
-
-                query,
-
-                results:
-                    tracks
-            });
-
-
-        } catch (error) {
-
-            console.error(
-                "Audius search:",
-                error
-            );
-
-
-            res.status(502).json({
-
-                error:
-                    "Não foi possível pesquisar no Audius."
-            });
-        }
+            type:
+                videoId ? "video" : (playlistId ? "playlist" : null)
+        });
     }
 );
 
 
 /* =========================================================
-   AUDIUS — TRENDING
+   YOUTUBE — GET VIDEO INFO
 ========================================================= */
 
 app.get(
-    "/api/audius/trending",
+    "/api/youtube/video/:id",
     async (req, res) => {
+
+        const { id } = req.params;
+
+        logDebug("GET /api/youtube/video/:id", { videoId: id });
 
         try {
 
-            const limit =
-                Math.min(
-                    Math.max(
-                        Number(
-                            req.query.limit || 20
-                        ),
-                        1
-                    ),
-                    50
-                );
+            if (!id) {
 
+                logError("ID do vídeo não fornecido");
 
-            const params =
-                new URLSearchParams({
-
-                    limit:
-                        String(limit)
-                });
-
-
-            const response =
-                await audiusFetch(
-                    `/tracks/trending?${params}`
-                );
-
-
-            const data =
-                await response.json();
-
-
-            const tracks =
-                Array.isArray(data.data)
-                    ? data.data.map(track => ({
-
-                        id:
-                            track.id || "",
-
-                        title:
-                            track.title || "Sem título",
-
-                        artist:
-                            track.user?.name ||
-                            "Artista desconhecido",
-
-                        duration:
-                            Number(
-                                track.duration
-                            ) || 0,
-
-                        artwork:
-                            track.artwork?._480x480 ||
-                            track.artwork?._1000x1000 ||
-                            "",
-
-                        genre:
-                            track.genre || "",
-
-                        playCount:
-                            Number(
-                                track.playCount
-                            ) || 0,
-
-                        permalink:
-                            track.permalink || ""
-
-                    }))
-                    : [];
-
-
-            res.json({
-
-                source:
-                    "audius",
-
-                results:
-                    tracks
-            });
-
-
-        } catch (error) {
-
-            console.error(
-                "Audius trending:",
-                error
-            );
-
-
-            res.status(502).json({
-
-                error:
-                    "Não foi possível obter as músicas em alta."
-            });
-        }
-    }
-);
-
-
-/* =========================================================
-   AUDIUS — TRACK
-========================================================= */
-
-app.get(
-    "/api/audius/track/:id",
-    async (req, res) => {
-
-        try {
-
-            const response =
-                await audiusFetch(
-                    `/tracks/${encodeURIComponent(
-                        req.params.id
-                    )}`
-                );
-
-
-            const data =
-                await response.json();
-
-
-            const track =
-                data.data;
-
-
-            if (!track) {
-
-                return res.status(404).json({
+                return res.status(400).json({
 
                     error:
-                        "Música não encontrada."
+                        "ID do vídeo é obrigatório."
                 });
             }
 
+            // Nota: A API do YouTube requer uma chave de API
+            // Para este projeto, vamos retornar as informações extraídas da URL
+            // Em produção, você deve usar a YouTube Data API
 
             res.json({
 
-                source:
-                    "audius",
+                status:
+                    "success",
 
-                track: {
+                videoId:
+                    id,
 
-                    id:
-                        track.id || "",
+                type:
+                    "video",
 
-                    title:
-                        track.title || "Sem título",
+                embedUrl:
+                    `https://www.youtube.com/embed/${id}?autoplay=1`,
 
-                    artist:
-                        track.user?.name ||
-                        "Artista desconhecido",
+                watchUrl:
+                    `https://www.youtube.com/watch?v=${id}`,
 
-                    duration:
-                        Number(
-                            track.duration
-                        ) || 0,
-
-                    artwork:
-                        track.artwork?._1000x1000 ||
-                        track.artwork?._480x480 ||
-                        "",
-
-                    genre:
-                        track.genre || "",
-
-                    mood:
-                        track.mood || "",
-
-                    description:
-                        track.description || "",
-
-                    permalink:
-                        track.permalink || "",
-
-                    streamable:
-                        track.isStreamable === true ||
-                        track.isStreamable === "true",
-
-                    downloadable:
-                        track.downloadable === true
-                }
+                message:
+                    "Vídeo pronto para reprodução"
             });
 
+            logDebug("Vídeo retornado com sucesso", { videoId: id });
 
         } catch (error) {
 
-            console.error(
-                "Audius track:",
-                error
-            );
-
+            logError("Erro ao obter informações do vídeo", error);
 
             res.status(502).json({
 
                 error:
-                    "Não foi possível obter a música."
+                    "Não foi possível obter as informações do vídeo."
             });
         }
     }
@@ -481,50 +349,225 @@ app.get(
 
 
 /* =========================================================
-   AUDIUS — STREAM
+   YOUTUBE — GET PLAYLIST INFO
 ========================================================= */
 
 app.get(
-    "/api/audius/stream/:id",
+    "/api/youtube/playlist/:id",
     async (req, res) => {
+
+        const { id } = req.params;
+
+        logDebug("GET /api/youtube/playlist/:id", { playlistId: id });
 
         try {
 
-            const response =
-                await audiusFetch(
-                    `/tracks/${encodeURIComponent(
-                        req.params.id
-                    )}/stream`
-                );
+            if (!id) {
 
+                logError("ID da playlist não fornecido");
 
-            /*
-             * O Audius responde com um redirect
-             * para o servidor que realmente entrega
-             * o áudio.
-             */
+                return res.status(400).json({
 
-            res.redirect(
-                response.url
-            );
+                    error:
+                        "ID da playlist é obrigatório."
+                });
+            }
 
+            res.json({
+
+                status:
+                    "success",
+
+                playlistId:
+                    id,
+
+                type:
+                    "playlist",
+
+                embedUrl:
+                    `https://www.youtube.com/embed/videoseries?list=${id}&autoplay=1`,
+
+                playlistUrl:
+                    `https://www.youtube.com/playlist?list=${id}`,
+
+                message:
+                    "Playlist pronta para reprodução"
+            });
+
+            logDebug("Playlist retornada com sucesso", { playlistId: id });
 
         } catch (error) {
 
-            console.error(
-                "Audius stream:",
-                error
-            );
-
+            logError("Erro ao obter informações da playlist", error);
 
             res.status(502).json({
 
                 error:
-                    "Não foi possível obter o stream."
+                    "Não foi possível obter as informações da playlist."
             });
         }
     }
 );
+
+
+/* =========================================================
+   YOUTUBE — PROCESS URL
+========================================================= */
+
+app.post(
+    "/api/youtube/process",
+    async (req, res) => {
+
+        const { url } = req.body;
+
+        logDebug("POST /api/youtube/process", { url });
+
+        if (!url) {
+
+            logError("URL não fornecida no processo");
+
+            return res.status(400).json({
+
+                error:
+                    "URL é obrigatória.",
+
+                processed:
+                    false
+            });
+        }
+
+        try {
+
+            if (!isValidYouTubeUrl(url)) {
+
+                logError("URL inválida", { url });
+
+                return res.status(400).json({
+
+                    error:
+                        "URL do YouTube inválida.",
+
+                    url,
+
+                    processed:
+                        false
+                });
+            }
+
+            const videoId = extractVideoId(url);
+            const playlistId = extractPlaylistId(url);
+
+            const result = {
+
+                url,
+
+                processed:
+                    true,
+
+                type:
+                    videoId ? "video" : (playlistId ? "playlist" : null),
+
+                videoId:
+                    videoId || null,
+
+                playlistId:
+                    playlistId || null,
+
+                embedUrl:
+                    videoId
+                        ? `https://www.youtube.com/embed/${videoId}?autoplay=1`
+                        : `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1`,
+
+                timestamp:
+                    new Date().toISOString()
+            };
+
+            logDebug("URL processada com sucesso", result);
+
+            res.json(result);
+
+        } catch (error) {
+
+            logError("Erro ao processar URL", error);
+
+            res.status(500).json({
+
+                error:
+                    "Erro ao processar a URL.",
+
+                processed:
+                    false
+            });
+        }
+    }
+);
+
+
+/* =========================================================
+   DEBUG ENDPOINT
+========================================================= */
+
+app.get("/api/debug/info", (req, res) => {
+
+    logDebug("GET /api/debug/info - Requisição de debug recebida");
+
+    res.json({
+
+        status:
+            "debug-active",
+
+        service:
+            "ApolloMusic YouTube API",
+
+        version:
+            "0.3.0",
+
+        environment:
+            process.env.NODE_ENV || "development",
+
+        port:
+            PORT,
+
+        features: {
+
+            youtubeValidation:
+                true,
+
+            youtubeProcessing:
+                true,
+
+            cors:
+                true,
+
+            logging:
+                true
+        },
+
+        endpoints: {
+
+            health:
+                "/api/health",
+
+            validateUrl:
+                "POST /api/youtube/validate",
+
+            getVideoInfo:
+                "GET /api/youtube/video/:id",
+
+            getPlaylistInfo:
+                "GET /api/youtube/playlist/:id",
+
+            processUrl:
+                "POST /api/youtube/process",
+
+            debug:
+                "GET /api/debug/info"
+        },
+
+        timestamp:
+            new Date().toISOString()
+    });
+});
 
 
 /* =========================================================
@@ -534,13 +577,21 @@ app.get(
 app.use(
     (req, res) => {
 
+        logDebug("404 - Rota não encontrada", {
+            method: req.method,
+            path: req.path
+        });
+
         res.status(404).json({
 
             error:
                 "Rota não encontrada.",
 
             path:
-                req.path
+                req.path,
+
+            method:
+                req.method
         });
     }
 );
@@ -553,21 +604,19 @@ app.use(
 app.use(
     (error, req, res, next) => {
 
-        console.error(
-            "Servidor:",
-            error
-        );
-
+        logError("Erro não tratado", error);
 
         if (res.headersSent) {
             return next(error);
         }
 
-
         res.status(500).json({
 
             error:
-                "Erro interno do servidor."
+                "Erro interno do servidor.",
+
+            message:
+                error.message || ""
         });
     }
 );
@@ -582,12 +631,14 @@ app.listen(
     "0.0.0.0",
     () => {
 
-        console.log(
-            `ApolloMusic API rodando na porta ${PORT}`
-        );
-
-        console.log(
-            `CORS habilitado`
-        );
+        console.log("\n");
+        console.log("╔════════════════════════════════════╗");
+        console.log("║   ApolloMusic API - YouTube        ║");
+        console.log("║   Versão 0.3.0                     ║");
+        console.log("╚════════════════════════════════════╝");
+        console.log(`\n✓ Servidor rodando na porta ${PORT}`);
+        console.log(`✓ CORS habilitado`);
+        console.log(`✓ Debug ativo`);
+        console.log(`✓ Endpoint de debug: /api/debug/info\n`);
     }
 );
