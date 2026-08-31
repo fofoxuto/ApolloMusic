@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ApolloMusic</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        rel="stylesheet"
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- SPLASH SCREEN -->
+
+    <div id="splash-screen">
+
+        <div class="splash-content">
+
+            <div class="splash-logo">
+                <span class="apollo">APOLLO</span>
+                <span class="music">MUSIC</span>
+            </div>
+
+            <div class="splash-version">
+                AUDIUS INDEXER
+            </div>
+
+            <div class="splash-loader">
+                <div id="splash-progress"></div>
+            </div>
+
+            <p id="splash-status">
+                Inicializando...
+            </p>
+
+            <div class="splash-author">
+                <span>DESENVOLVIDO POR</span>
+                <strong>@fofoxuto</strong>
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- APP -->
+
+    <main class="app">
+
+        <!-- STATUS -->
+
+        <header class="header-centered">
+
+            <span class="top-label">
+                Tocando agora
+            </span>
+
+            <h1 id="status">
+                Aguardando música.
+            </h1>
+
+        </header>
+
+
+        <!-- PLAYER -->
+
+        <section class="player">
+
+            <div class="cover-wrapper">
+
+                <img
+                    id="cover"
+                    src=""
+                    alt="Capa da música"
+                    hidden
+                >
+
+            </div>
+
+
+            <div class="track-info">
+
+                <div class="metadata-left">
+
+                    <h2 id="title">
+                        ---
+                    </h2>
+
+                    <p id="artist">
+                        ---
+                    </p>
+
+                    <p
+                        id="album"
+                        class="album"
+                    ></p>
+
+                </div>
+
+
+                <span
+                    id="counter"
+                    class="counter"
+                >
+                    0 / 0
+                </span>
+
+            </div>
+
+
+            <!-- PROGRESSO -->
+
+            <div class="audio-controls-visual">
+
+                <div class="volume-control">
+
+                    <div class="volume-bar-bg">
+
+                        <div class="volume-bar-thumb"></div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="progress-section">
+
+                    <div
+                        id="progressBar"
+                        class="progress-bar-bg"
+                    >
+
+                        <div
+                            id="progressFill"
+                            class="progress-bar-fill"
+                        ></div>
+
+                    </div>
+
+
+                    <div class="progress-times">
+
+                        <span id="currentTime">
+                            0:00
+                        </span>
+
+                        <span id="duration">
+                            --:--
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- CONTROLES -->
+
+            <div class="controls">
+
+                <button
+                    id="prev"
+                    type="button"
+                    aria-label="Faixa anterior"
+                >
+                    ‹
+                </button>
+
+
+                <button
+                    id="play"
+                    type="button"
+                    aria-label="Reproduzir"
+                >
+                    ▶
+                </button>
+
+
+                <button
+                    id="next"
+                    type="button"
+                    aria-label="Próxima faixa"
+                >
+                    ›
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- AUDIUS -->
+
+        <section class="library">
+
+            <h2>
+                Audius
+            </h2>
+
+
+            <div class="audius-input">
+
+                <input
+                    id="audiusSearch"
+                    type="search"
+                    placeholder="Pesquisar músicas no Audius"
+                    autocomplete="off"
+                    spellcheck="false"
+                >
+
+
+                <button
+                    id="searchAudius"
+                    type="button"
+                >
+                    Buscar
+                </button>
+
+            </div>
+
+
+            <div
+                id="audiusResults"
+                class="audius-results"
+            ></div>
+
+        </section>
+
+    </main>
+
+
+    <script src="app.js"></script>
+
+</body>
+
+</html>
