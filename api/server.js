@@ -1,860 +1,174 @@
 const express = require("express");
 const cors = require("cors");
-const {
-    Innertube,
-    UniversalCache
-} = require("youtubei.js");
 
 const app = express();
 
-const PORT =
-    process.env.PORT || 10000;
+const PORT = process.env.PORT || 10000;
 
 
 /* =========================================================
    CORS
 ========================================================= */
 
-app.use(
-    cors({
-        origin: true,
+const corsOptions = {
+    origin: true,
 
-        methods: [
-            "GET",
-            "HEAD",
-            "OPTIONS",
-            "POST"
-        ],
+    methods: [
+        "GET",
+        "HEAD",
+        "OPTIONS",
+        "POST"
+    ],
 
-        allowedHeaders: [
-            "Origin",
-            "X-Requested-With",
-            "Content-Type",
-            "Accept",
-            "Range"
-        ],
+    allowedHeaders: [
+        "Origin",
+        "X-Requested-With",
+        "Content-Type",
+        "Accept",
+        "Range"
+    ],
 
-        exposedHeaders: [
-            "Content-Length",
-            "Content-Range",
-            "Accept-Ranges"
-        ],
+    exposedHeaders: [
+        "Content-Length",
+        "Content-Range",
+        "Accept-Ranges"
+    ],
 
-        credentials: false,
+    credentials: false,
 
-        optionsSuccessStatus: 204
-    })
-);
+    optionsSuccessStatus: 204
+};
+
+
+app.use(cors(corsOptions));
 
 
 /* =========================================================
    MIDDLEWARE
 ========================================================= */
 
-app.use(
-    express.json({
-        limit: "1mb"
-    })
-);
+app.use(express.json());
 
 
 /* =========================================================
-   LOG
+   LOGGER DEBUG
 ========================================================= */
 
 function logDebug(message, data = null) {
 
-    const timestamp =
-        new Date().toISOString();
+    const timestamp = new Date().toISOString();
 
-    console.log(
-        `[${timestamp}] [DEBUG] ${message}`
-    );
+    const logMessage = `[${timestamp}] [DEBUG] ${message}`;
 
-    if (data !== null) {
+    console.log(logMessage);
 
-        try {
-
-            console.log(
-                JSON.stringify(
-                    data,
-                    null,
-                    2
-                )
-            );
-
-        } catch {
-
-            console.log(data);
-        }
+    if (data) {
+        console.log(JSON.stringify(data, null, 2));
     }
 }
 
 
 function logError(message, error = null) {
 
-    const timestamp =
-        new Date().toISOString();
+    const timestamp = new Date().toISOString();
 
-    console.error(
-        `[${timestamp}] [ERROR] ${message}`
-    );
+    const logMessage = `[${timestamp}] [ERROR] ${message}`;
+
+    console.error(logMessage);
 
     if (error) {
-
         console.error(error);
     }
 }
 
 
 /* =========================================================
-   YOUTUBE.JS / INNERTUBE
+   YOUTUBE UTILITIES
 ========================================================= */
 
-let youtube = null;
-let youtubePromise = null;
-
-
-async function getYouTube() {
-
-    if (youtube) {
-
-        return youtube;
-    }
-
-
-    if (youtubePromise) {
-
-        return youtubePromise;
-    }
-
-
-    logDebug(
-        "Inicializando YouTube.js..."
-    );
-
-
-    youtubePromise =
-        Innertube.create({
-            cache:
-                new UniversalCache(true)
-        })
-        .then(instance => {
-
-            youtube =
-                instance;
-
-            logDebug(
-                "YouTube.js inicializado com sucesso."
-            );
-
-            return instance;
-
-        })
-        .catch(error => {
-
-            youtube = null;
-            youtubePromise = null;
-
-            logError(
-                "Falha ao inicializar YouTube.js.",
-                error
-            );
-
-            throw error;
-        });
-
-
-    return youtubePromise;
-}
-
-
-/* =========================================================
-   UTILIDADES
-========================================================= */
-
-function cleanVideoId(id) {
-
-    if (!id) {
-        return null;
-    }
-
-
-    const value =
-        String(id)
-            .trim()
-            .replace(
-                /[^a-zA-Z0-9_-]/g,
-                ""
-            );
-
-
-    if (!value) {
-        return null;
-    }
-
-
-    return value.slice(0, 20);
-}
-
-
-function cleanPlaylistId(id) {
-
-    if (!id) {
-        return null;
-    }
-
-
-    const value =
-        String(id)
-            .trim()
-            .replace(
-                /[^a-zA-Z0-9_-]/g,
-                ""
-            );
-
-
-    if (!value) {
-        return null;
-    }
-
-
-    return value.slice(0, 100);
-}
-
-
-/* =========================================================
-   TEXTO
-========================================================= */
-
-function getText(value) {
-
-    if (
-        value === null ||
-        value === undefined
-    ) {
-
-        return "";
-    }
-
-
-    if (
-        typeof value === "string"
-    ) {
-
-        return value.trim();
-    }
-
-
-    if (
-        typeof value.text === "string"
-    ) {
-
-        return value.text.trim();
-    }
-
-
-    if (
-        Array.isArray(value.runs)
-    ) {
-
-        return value.runs
-            .map(run => run?.text || "")
-            .join("")
-            .trim();
-    }
-
-
-    if (
-        typeof value.toString === "function"
-    ) {
-
-        try {
-
-            const text =
-                value.toString();
-
-            if (
-                text &&
-                text !== "[object Object]"
-            ) {
-
-                return text.trim();
-            }
-
-        } catch {
-            /* ignora */
-        }
-    }
-
-
-    return "";
-}
-
-
-/* =========================================================
-   URL DO YOUTUBE
-========================================================= */
-
-function isValidYouTubeUrl(url) {
-
-    try {
-
-        const parsed =
-            new URL(url);
-
-
-        const hostname =
-            parsed.hostname
-                .toLowerCase()
-                .replace(/^www\./, "");
-
-
-        return [
-            "youtube.com",
-            "music.youtube.com",
-            "m.youtube.com",
-            "youtu.be"
-        ].includes(hostname);
-
-    } catch {
-
-        return false;
-    }
-}
-
-
-/* =========================================================
-   EXTRAI VIDEO ID
-========================================================= */
-
+/**
+ * Extrai o ID do vídeo de uma URL do YouTube
+ */
 function extractVideoId(url) {
 
     try {
 
-        const parsed =
-            new URL(url);
+        const urlObj = new URL(url);
 
-
-        const hostname =
-            parsed.hostname
-                .toLowerCase()
-                .replace(/^www\./, "");
-
-
-        if (
-            hostname === "youtube.com" ||
-            hostname === "music.youtube.com" ||
-            hostname === "m.youtube.com"
-        ) {
-
-            if (
-                parsed.pathname === "/watch"
-            ) {
-
-                return cleanVideoId(
-                    parsed.searchParams.get("v")
-                );
-            }
-
-
-            if (
-                parsed.pathname.startsWith("/shorts/")
-            ) {
-
-                return cleanVideoId(
-                    parsed.pathname.split("/")[2]
-                );
-            }
-
-
-            if (
-                parsed.pathname.startsWith("/embed/")
-            ) {
-
-                return cleanVideoId(
-                    parsed.pathname.split("/")[2]
-                );
-            }
+        // youtube.com/watch?v=VIDEO_ID
+        if (urlObj.hostname.includes('youtube.com')) {
+            return urlObj.searchParams.get('v');
         }
 
+        // youtu.be/VIDEO_ID
+        if (urlObj.hostname.includes('youtu.be')) {
+            return urlObj.pathname.slice(1);
+        }
 
-        if (
-            hostname === "youtu.be"
-        ) {
-
-            return cleanVideoId(
-                parsed.pathname
-                    .split("/")
-                    .filter(Boolean)[0]
-            );
+        // youtube.com/embed/VIDEO_ID
+        if (urlObj.pathname.includes('/embed/')) {
+            return urlObj.pathname.split('/embed/')[1];
         }
 
     } catch (error) {
-
-        logError(
-            "Erro ao extrair videoId.",
-            error
-        );
+        logError("Erro ao extrair ID do vídeo", error);
     }
-
 
     return null;
 }
 
 
-/* =========================================================
-   EXTRAI PLAYLIST ID
-========================================================= */
-
+/**
+ * Extrai o ID da playlist de uma URL do YouTube
+ */
 function extractPlaylistId(url) {
 
     try {
 
-        const parsed =
-            new URL(url);
+        const urlObj = new URL(url);
 
-
-        return cleanPlaylistId(
-            parsed.searchParams.get("list")
-        );
-
-    } catch (error) {
-
-        logError(
-            "Erro ao extrair playlistId.",
-            error
-        );
-
-        return null;
-    }
-}
-
-
-/* =========================================================
-   THUMBNAIL
-========================================================= */
-
-function getThumbnail(
-    item,
-    videoId
-) {
-
-    try {
-
-        const thumbnails =
-            item?.thumbnails;
-
-
-        if (
-            Array.isArray(thumbnails) &&
-            thumbnails.length > 0
-        ) {
-
-            for (
-                let i = thumbnails.length - 1;
-                i >= 0;
-                i--
-            ) {
-
-                const url =
-                    thumbnails[i]?.url;
-
-                if (url) {
-
-                    return url;
-                }
-            }
+        // youtube.com/playlist?list=PLAYLIST_ID
+        if (urlObj.hostname.includes('youtube.com') && urlObj.searchParams.has('list')) {
+            return urlObj.searchParams.get('list');
         }
 
-    } catch {
-        /* ignora */
-    }
-
-
-    return (
-        `https://i.ytimg.com/vi/` +
-        `${videoId}/hqdefault.jpg`
-    );
-}
-
-
-/* =========================================================
-   NORMALIZA ITEM DA PLAYLIST
-========================================================= */
-
-function normalizePlaylistItem(item) {
-
-    if (!item) {
-        return null;
-    }
-
-
-    /*
-     * O youtubei.js pode usar diferentes
-     * propriedades dependendo da versão.
-     */
-
-    let videoId =
-        item.id ||
-        item.video_id ||
-        item.videoId ||
-        item.video?.id ||
-        item.video?.video_id;
-
-
-    /*
-     * Alguns objetos podem possuir
-     * o ID dentro de endpoint.
-     */
-
-    if (!videoId) {
-
-        try {
-
-            videoId =
-                item.endpoint?.payload?.videoId ||
-                item.endpoint?.payload?.video_id ||
-                item.navigation_endpoint?.payload?.videoId;
-
-        } catch {
-            /* ignora */
-        }
-    }
-
-
-    videoId =
-        cleanVideoId(videoId);
-
-
-    if (!videoId) {
-
-        return null;
-    }
-
-
-    const title =
-        getText(item.title) ||
-        getText(item.video?.title) ||
-        "Vídeo do YouTube";
-
-
-    const artist =
-        getText(item.author) ||
-        getText(item.short_byline_text) ||
-        getText(item.channel) ||
-        getText(item.video?.author) ||
-        "YouTube";
-
-
-    const thumbnail =
-        getThumbnail(
-            item,
-            videoId
-        );
-
-
-    return {
-
-        id:
-            videoId,
-
-        videoId:
-            videoId,
-
-        title,
-
-        artist,
-
-        album:
-            "",
-
-        cover:
-            thumbnail,
-
-        thumbnail,
-
-        url:
-            `https://www.youtube.com/watch?v=${videoId}`
-    };
-}
-
-
-/* =========================================================
-   REMOVE DUPLICADOS
-========================================================= */
-
-function removeDuplicateTracks(tracks) {
-
-    const seen =
-        new Set();
-
-
-    return tracks.filter(track => {
-
-        if (!track?.id) {
-            return false;
-        }
-
-
-        if (
-            seen.has(track.id)
-        ) {
-
-            return false;
-        }
-
-
-        seen.add(track.id);
-
-        return true;
-    });
-}
-
-
-/* =========================================================
-   ESCANEIA PLAYLIST
-========================================================= */
-
-async function getPlaylistItems(playlistId) {
-
-    const yt =
-        await getYouTube();
-
-
-    logDebug(
-        "1. YouTube.js iniciado."
-    );
-
-
-    logDebug(
-        "2. Buscando playlist.",
-        {
-            playlistId
-        }
-    );
-
-
-    let playlist;
-
-
-    try {
-
-        playlist =
-            await yt.getPlaylist(
-                playlistId
-            );
-
-    } catch (error) {
-
-        logError(
-            "3. Erro dentro de yt.getPlaylist().",
-            error
-        );
-
-        throw new Error(
-            `YouTube.js não conseguiu abrir a playlist: ${error?.message || "erro desconhecido"}`
-        );
-    }
-
-
-    if (!playlist) {
-
-        throw new Error(
-            "O YouTube.js retornou uma playlist vazia."
-        );
-    }
-
-
-    logDebug(
-        "4. Playlist recebida.",
-        {
-            keys:
-                Object.keys(playlist || {})
-        }
-    );
-
-
-    /*
-     * Primeira página.
-     */
-
-    let rawItems =
-        Array.isArray(playlist.items)
-            ? [...playlist.items]
-            : [];
-
-
-    logDebug(
-        "5. Itens encontrados na primeira página.",
-        {
-            count:
-                rawItems.length
-        }
-    );
-
-
-    /*
-     * Tenta paginação quando disponível.
-     */
-
-    try {
-
-        if (
-            typeof playlist.has_continuation ===
-            "function"
-        ) {
-
-            let pages = 0;
-
-
-            while (
-                playlist.has_continuation() &&
-                pages < 20
-            ) {
-
-                pages++;
-
-
-                logDebug(
-                    "6. Carregando próxima página.",
-                    {
-                        page:
-                            pages
-                    }
-                );
-
-
-                const next =
-                    await playlist.getContinuation();
-
-
-                if (!next) {
-                    break;
-                }
-
-
-                const nextItems =
-                    Array.isArray(next.items)
-                        ? next.items
-                        : [];
-
-
-                rawItems.push(
-                    ...nextItems
-                );
-
-
-                /*
-                 * Algumas versões retornam
-                 * um novo objeto de playlist.
-                 */
-
-                playlist =
-                    next;
-
-
-                logDebug(
-                    "Página carregada.",
-                    {
-                        page:
-                            pages,
-
-                        items:
-                            nextItems.length,
-
-                        total:
-                            rawItems.length
-                    }
-                );
-            }
+        // youtube.com/watch?v=VIDEO_ID&list=PLAYLIST_ID
+        if (urlObj.searchParams.has('list')) {
+            return urlObj.searchParams.get('list');
         }
 
     } catch (error) {
-
-        /*
-         * Se a paginação falhar, mantém
-         * os vídeos já encontrados.
-         */
-
-        logError(
-            "Erro durante paginação da playlist.",
-            error
-        );
+        logError("Erro ao extrair ID da playlist", error);
     }
 
-
-    logDebug(
-        "7. Total de itens brutos.",
-        {
-            count:
-                rawItems.length
-        }
-    );
+    return null;
+}
 
 
-    /*
-     * Normalização.
-     */
+/**
+ * Valida se uma URL é válida do YouTube
+ */
+function isValidYouTubeUrl(url) {
 
-    const normalized =
-        rawItems
-            .map(
-                normalizePlaylistItem
-            )
-            .filter(Boolean);
+    try {
 
+        const urlObj = new URL(url);
 
-    const items =
-        removeDuplicateTracks(
-            normalized
+        const validHosts = [
+            'youtube.com',
+            'www.youtube.com',
+            'youtu.be',
+            'www.youtu.be',
+            'm.youtube.com'
+        ];
+
+        return validHosts.some(host =>
+            urlObj.hostname.includes(host)
         );
 
-
-    logDebug(
-        "8. Itens normalizados.",
-        {
-            brutos:
-                rawItems.length,
-
-            validos:
-                items.length
-        }
-    );
-
-
-    /*
-     * Mostra um exemplo no log para
-     * facilitar debug no Render.
-     */
-
-    if (
-        rawItems.length > 0
-    ) {
-
-        logDebug(
-            "9. Exemplo do primeiro item bruto.",
-            {
-                keys:
-                    Object.keys(
-                        rawItems[0] || {}
-                    )
-            }
-        );
+    } catch (error) {
+        return false;
     }
-
-
-    if (
-        items.length === 0
-    ) {
-
-        throw new Error(
-            "O YouTube.js encontrou a playlist, mas não conseguiu identificar os vídeos."
-        );
-    }
-
-
-    return items;
 }
 
 
@@ -864,22 +178,24 @@ async function getPlaylistItems(playlistId) {
 
 app.get("/", (req, res) => {
 
+    logDebug("GET / - Requisição raiz recebida");
+
     res.json({
 
         name:
             "ApolloMusic API - YouTube",
 
         version:
-            "0.6.0",
+            "0.3.0",
 
         status:
             "online",
 
-        youtube:
-            "youtubei.js",
+        cors:
+            "enabled",
 
-        apiKeyRequired:
-            false
+        type:
+            "youtube-player"
     });
 });
 
@@ -888,70 +204,63 @@ app.get("/", (req, res) => {
    HEALTH
 ========================================================= */
 
-app.get(
-    "/api/health",
-    (req, res) => {
+app.get("/api/health", (req, res) => {
 
-        res.json({
+    logDebug("GET /api/health - Health check recebido");
 
-            status:
-                "ok",
+    res.json({
 
-            service:
-                "apollo-music-youtube-api",
+        status:
+            "ok",
 
-            youtube:
-                "youtubei.js",
+        service:
+            "apollo-music-youtube-api",
 
-            apiKeyRequired:
-                false,
+        cors:
+            "enabled",
 
-            timestamp:
-                new Date().toISOString()
-        });
-    }
-);
+        timestamp:
+            new Date().toISOString()
+    });
+});
 
 
 /* =========================================================
-   VALIDATE
+   YOUTUBE — VALIDATE URL
 ========================================================= */
 
 app.post(
     "/api/youtube/validate",
     (req, res) => {
 
-        const {
-            url
-        } = req.body;
+        const { url } = req.body;
 
+        logDebug("POST /api/youtube/validate", { url });
 
         if (!url) {
 
-            return res
-                .status(400)
-                .json({
+            logError("URL não fornecida");
 
-                    valid:
-                        false,
+            return res.status(400).json({
 
-                    error:
-                        "URL é obrigatória."
-                });
+                error:
+                    "URL é obrigatória.",
+
+                valid:
+                    false
+            });
         }
 
+        const valid = isValidYouTubeUrl(url);
+        const videoId = extractVideoId(url);
+        const playlistId = extractPlaylistId(url);
 
-        const valid =
-            isValidYouTubeUrl(url);
-
-
-        const videoId =
-            extractVideoId(url);
-
-
-        const playlistId =
-            extractPlaylistId(url);
-
+        logDebug("Validação concluída", {
+            url,
+            valid,
+            videoId,
+            playlistId
+        });
 
         res.json({
 
@@ -966,462 +275,294 @@ app.post(
                 playlistId || null,
 
             type:
-                videoId
-                    ? "video"
-                    : playlistId
-                        ? "playlist"
-                        : null
+                videoId ? "video" : (playlistId ? "playlist" : null)
         });
     }
 );
 
 
 /* =========================================================
-   VIDEO INFO
+   YOUTUBE — GET VIDEO INFO
 ========================================================= */
 
 app.get(
     "/api/youtube/video/:id",
-    (req, res) => {
+    async (req, res) => {
 
-        const videoId =
-            cleanVideoId(
-                req.params.id
-            );
+        const { id } = req.params;
 
+        logDebug("GET /api/youtube/video/:id", { videoId: id });
 
-        if (!videoId) {
+        try {
 
-            return res
-                .status(400)
-                .json({
+            if (!id) {
+
+                logError("ID do vídeo não fornecido");
+
+                return res.status(400).json({
 
                     error:
                         "ID do vídeo é obrigatório."
                 });
+            }
+
+            res.json({
+
+                status:
+                    "success",
+
+                videoId:
+                    id,
+
+                type:
+                    "video",
+
+                embedUrl:
+                    `https://www.youtube.com/embed/${id}?autoplay=1`,
+
+                watchUrl:
+                    `https://www.youtube.com/watch?v=${id}`,
+
+                message:
+                    "Vídeo pronto para reprodução"
+            });
+
+            logDebug("Vídeo retornado com sucesso", { videoId: id });
+
+        } catch (error) {
+
+            logError("Erro ao obter informações do vídeo", error);
+
+            res.status(502).json({
+
+                error:
+                    "Não foi possível obter as informações do vídeo."
+            });
         }
-
-
-        res.json({
-
-            status:
-                "success",
-
-            videoId,
-
-            type:
-                "video",
-
-            title:
-                "Vídeo do YouTube",
-
-            artist:
-                "YouTube",
-
-            album:
-                "",
-
-            cover:
-                `https://i.ytimg.com/vi/` +
-                `${videoId}/hqdefault.jpg`,
-
-            thumbnail:
-                `https://i.ytimg.com/vi/` +
-                `${videoId}/hqdefault.jpg`,
-
-            embedUrl:
-                `https://www.youtube.com/embed/` +
-                `${videoId}?autoplay=1`,
-
-            watchUrl:
-                `https://www.youtube.com/watch?v=${videoId}`
-        });
     }
 );
 
 
 /* =========================================================
-   PLAYLIST INFO
+   YOUTUBE — GET PLAYLIST INFO
 ========================================================= */
 
 app.get(
     "/api/youtube/playlist/:id",
     async (req, res) => {
 
-        const playlistId =
-            cleanPlaylistId(
-                req.params.id
-            );
+        const { id } = req.params;
 
+        logDebug("GET /api/youtube/playlist/:id", { playlistId: id });
 
-        if (!playlistId) {
+        try {
 
-            return res
-                .status(400)
-                .json({
+            if (!id) {
+
+                logError("ID da playlist não fornecido");
+
+                return res.status(400).json({
 
                     error:
                         "ID da playlist é obrigatório."
                 });
-        }
+            }
 
-
-        try {
-
-            const items =
-                await getPlaylistItems(
-                    playlistId
-                );
-
-
-            return res.json({
+            res.json({
 
                 status:
                     "success",
 
-                processed:
-                    true,
+                playlistId:
+                    id,
 
                 type:
                     "playlist",
 
-                playlistId,
-
-                count:
-                    items.length,
-
-                playlistItems:
-                    items,
-
-                items:
-                    items,
+                embedUrl:
+                    `https://www.youtube.com/embed/videoseries?list=${id}&autoplay=1`,
 
                 playlistUrl:
-                    `https://www.youtube.com/playlist?list=${playlistId}`
+                    `https://www.youtube.com/playlist?list=${id}`,
+
+                message:
+                    "Playlist pronta para reprodução"
             });
+
+            logDebug("Playlist retornada com sucesso", { playlistId: id });
 
         } catch (error) {
 
-            logError(
-                "Erro no endpoint de playlist.",
-                error
-            );
+            logError("Erro ao obter informações da playlist", error);
 
+            res.status(502).json({
 
-            return res
-                .status(502)
-                .json({
-
-                    processed:
-                        false,
-
-                    type:
-                        "playlist",
-
-                    playlistId,
-
-                    error:
-                        "Não foi possível obter os vídeos da playlist.",
-
-                    details:
-                        error?.message || ""
-                });
+                error:
+                    "Não foi possível obter as informações da playlist."
+            });
         }
     }
 );
 
 
 /* =========================================================
-   PROCESS URL
+   YOUTUBE — PROCESS URL
 ========================================================= */
 
 app.post(
     "/api/youtube/process",
     async (req, res) => {
 
-        const {
-            url
-        } = req.body;
+        const { url } = req.body;
 
-
-        logDebug(
-            "POST /api/youtube/process.",
-            {
-                url
-            }
-        );
-
+        logDebug("POST /api/youtube/process", { url });
 
         if (!url) {
 
-            return res
-                .status(400)
-                .json({
+            logError("URL não fornecida no processo");
 
-                    processed:
-                        false,
+            return res.status(400).json({
 
-                    error:
-                        "URL é obrigatória."
-                });
+                error:
+                    "URL é obrigatória.",
+
+                processed:
+                    false
+            });
         }
-
-
-        if (
-            !isValidYouTubeUrl(url)
-        ) {
-
-            return res
-                .status(400)
-                .json({
-
-                    processed:
-                        false,
-
-                    error:
-                        "URL do YouTube inválida."
-                });
-        }
-
 
         try {
 
-            const videoId =
-                extractVideoId(url);
+            if (!isValidYouTubeUrl(url)) {
 
+                logError("URL inválida", { url });
 
-            const playlistId =
-                extractPlaylistId(url);
-
-
-            /* =================================================
-               PLAYLIST
-            ================================================= */
-
-            if (playlistId) {
-
-                logDebug(
-                    "Playlist detectada.",
-                    {
-                        playlistId
-                    }
-                );
-
-
-                const playlistItems =
-                    await getPlaylistItems(
-                        playlistId
-                    );
-
-
-                const result = {
-
-                    url,
-
-                    processed:
-                        true,
-
-                    type:
-                        "playlist",
-
-                    playlistId,
-
-                    count:
-                        playlistItems.length,
-
-                    playlistItems:
-                        playlistItems,
-
-                    items:
-                        playlistItems,
-
-                    timestamp:
-                        new Date().toISOString()
-                };
-
-
-                logDebug(
-                    "Playlist processada com sucesso.",
-                    {
-                        playlistId,
-
-                        count:
-                            playlistItems.length
-                    }
-                );
-
-
-                return res.json(
-                    result
-                );
-            }
-
-
-            /* =================================================
-               VÍDEO
-            ================================================= */
-
-            if (videoId) {
-
-                const thumbnail =
-                    `https://i.ytimg.com/vi/` +
-                    `${videoId}/hqdefault.jpg`;
-
-
-                return res.json({
-
-                    url,
-
-                    processed:
-                        true,
-
-                    type:
-                        "video",
-
-                    videoId,
-
-                    title:
-                        "Vídeo do YouTube",
-
-                    artist:
-                        "YouTube",
-
-                    album:
-                        "",
-
-                    cover:
-                        thumbnail,
-
-                    thumbnail,
-
-                    embedUrl:
-                        `https://www.youtube.com/embed/` +
-                        `${videoId}?autoplay=1`,
-
-                    watchUrl:
-                        `https://www.youtube.com/watch?v=${videoId}`,
-
-                    timestamp:
-                        new Date().toISOString()
-                });
-            }
-
-
-            return res
-                .status(400)
-                .json({
-
-                    processed:
-                        false,
+                return res.status(400).json({
 
                     error:
-                        "Não foi possível identificar vídeo ou playlist."
+                        "URL do YouTube inválida.",
+
+                    url,
+
+                    processed:
+                        false
                 });
+            }
+
+            const videoId = extractVideoId(url);
+            const playlistId = extractPlaylistId(url);
+
+            const result = {
+
+                url,
+
+                processed:
+                    true,
+
+                type:
+                    videoId ? "video" : (playlistId ? "playlist" : null),
+
+                videoId:
+                    videoId || null,
+
+                playlistId:
+                    playlistId || null,
+
+                embedUrl:
+                    videoId
+                        ? `https://www.youtube.com/embed/${videoId}?autoplay=1`
+                        : `https://www.youtube.com/embed/videoseries?list=${playlistId}&autoplay=1`,
+
+                timestamp:
+                    new Date().toISOString()
+            };
+
+            logDebug("URL processada com sucesso", result);
+
+            res.json(result);
 
         } catch (error) {
 
-            logError(
-                "Erro ao processar URL.",
-                error
-            );
+            logError("Erro ao processar URL", error);
 
+            res.status(500).json({
 
-            return res
-                .status(502)
-                .json({
+                error:
+                    "Erro ao processar a URL.",
 
-                    processed:
-                        false,
-
-                    error:
-                        "Não foi possível processar o conteúdo do YouTube.",
-
-                    details:
-                        error?.message || ""
-                });
+                processed:
+                    false
+            });
         }
     }
 );
 
 
 /* =========================================================
-   DEBUG
+   DEBUG ENDPOINT
 ========================================================= */
 
-app.get(
-    "/api/debug/info",
-    (req, res) => {
+app.get("/api/debug/info", (req, res) => {
 
-        res.json({
+    logDebug("GET /api/debug/info - Requisição de debug recebida");
 
-            status:
-                "debug-active",
+    res.json({
 
-            service:
-                "ApolloMusic YouTube API",
+        status:
+            "debug-active",
 
-            version:
-                "0.6.0",
+        service:
+            "ApolloMusic YouTube API",
 
-            youtube:
-                "youtubei.js",
+        version:
+            "0.3.0",
 
-            apiKeyRequired:
-                false,
+        environment:
+            process.env.NODE_ENV || "development",
 
-            features: {
+        port:
+            PORT,
 
-                youtubeValidation:
-                    true,
+        features: {
 
-                youtubeProcessing:
-                    true,
+            youtubeValidation:
+                true,
 
-                playlistScanning:
-                    true,
+            youtubeProcessing:
+                true,
 
-                pagination:
-                    true,
+            cors:
+                true,
 
-                metadata:
-                    true,
+            logging:
+                true
+        },
 
-                thumbnails:
-                    true,
+        endpoints: {
 
-                cors:
-                    true,
+            health:
+                "/api/health",
 
-                logging:
-                    true
-            },
+            validateUrl:
+                "POST /api/youtube/validate",
 
-            endpoints: {
+            getVideoInfo:
+                "GET /api/youtube/video/:id",
 
-                health:
-                    "GET /api/health",
+            getPlaylistInfo:
+                "GET /api/youtube/playlist/:id",
 
-                validate:
-                    "POST /api/youtube/validate",
+            processUrl:
+                "POST /api/youtube/process",
 
-                video:
-                    "GET /api/youtube/video/:id",
+            debug:
+                "GET /api/debug/info"
+        },
 
-                playlist:
-                    "GET /api/youtube/playlist/:id",
-
-                process:
-                    "POST /api/youtube/process",
-
-                debug:
-                    "GET /api/debug/info"
-            },
-
-            timestamp:
-                new Date().toISOString()
-        });
-    }
-);
+        timestamp:
+            new Date().toISOString()
+    });
+});
 
 
 /* =========================================================
@@ -1431,19 +572,22 @@ app.get(
 app.use(
     (req, res) => {
 
-        res
-            .status(404)
-            .json({
+        logDebug("404 - Rota não encontrada", {
+            method: req.method,
+            path: req.path
+        });
 
-                error:
-                    "Rota não encontrada.",
+        res.status(404).json({
 
-                path:
-                    req.path,
+            error:
+                "Rota não encontrada.",
 
-                method:
-                    req.method
-            });
+            path:
+                req.path,
+
+            method:
+                req.method
+        });
     }
 );
 
@@ -1453,37 +597,22 @@ app.use(
 ========================================================= */
 
 app.use(
-    (
-        error,
-        req,
-        res,
-        next
-    ) => {
+    (error, req, res, next) => {
 
-        logError(
-            "Erro não tratado.",
-            error
-        );
+        logError("Erro não tratado", error);
 
-
-        if (
-            res.headersSent
-        ) {
-
+        if (res.headersSent) {
             return next(error);
         }
 
+        res.status(500).json({
 
-        res
-            .status(500)
-            .json({
+            error:
+                "Erro interno do servidor.",
 
-                error:
-                    "Erro interno do servidor.",
-
-                message:
-                    error?.message || ""
-            });
+            message:
+                error.message || ""
+        });
     }
 );
 
@@ -1497,50 +626,14 @@ app.listen(
     "0.0.0.0",
     () => {
 
-        console.log("");
-
-        console.log(
-            "╔════════════════════════════════════╗"
-        );
-
-        console.log(
-            "║   ApolloMusic API - YouTube        ║"
-        );
-
-        console.log(
-            "║   Versão 0.6.0                     ║"
-        );
-
-        console.log(
-            "╚════════════════════════════════════╝"
-        );
-
-        console.log("");
-
-        console.log(
-            `✓ Servidor na porta ${PORT}`
-        );
-
-        console.log(
-            "✓ CORS habilitado"
-        );
-
-        console.log(
-            "✓ YouTube.js / Innertube habilitado"
-        );
-
-        console.log(
-            "✓ Scanner de playlists habilitado"
-        );
-
-        console.log(
-            "✓ Paginação habilitada"
-        );
-
-        console.log(
-            "✓ API Key do YouTube NÃO necessária"
-        );
-
-        console.log("");
+        console.log("\n");
+        console.log("╔════════════════════════════════════╗");
+        console.log("║   ApolloMusic API - YouTube        ║");
+        console.log("║   Versão 0.3.0                     ║");
+        console.log("╚════════════════════════════════════╝");
+        console.log(`\n✓ Servidor rodando na porta ${PORT}`);
+        console.log(`✓ CORS habilitado`);
+        console.log(`✓ Debug ativo`);
+        console.log(`✓ Endpoint de debug: /api/debug/info\n`);
     }
 );
