@@ -1,0 +1,770 @@
+* {
+    box-sizing: border-box;
+}
+
+:root {
+    color-scheme: dark;
+    font-family: "Inter", system-ui, -apple-system, sans-serif;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+
+    background: #121212;
+    color: #f5f5f5;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+button,
+input {
+    font: inherit;
+}
+
+button {
+    border: 0;
+    cursor: pointer;
+}
+
+.app {
+    width: min(calc(100% - 32px), 420px);
+    margin: 0 auto;
+    padding: 24px 0;
+}
+
+
+/* =========================
+   HEADER
+========================= */
+
+.header-centered {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.top-label {
+    display: block;
+
+    margin-bottom: 4px;
+
+    color: #a7a7a7;
+
+    font-size: 12px;
+    font-weight: 500;
+}
+
+#status {
+    margin: 0;
+
+    color: #fff;
+
+    font-size: 14px;
+    font-weight: 600;
+}
+
+
+/* =========================
+   PLAYER
+========================= */
+
+.player {
+    padding: 24px;
+
+    border-radius: 24px;
+
+    background: #181818;
+
+    box-shadow:
+        0 16px 32px rgba(0, 0, 0, 0.6);
+}
+
+.cover-wrapper {
+    width: 100%;
+    aspect-ratio: 1;
+
+    overflow: hidden;
+
+    border-radius: 12px;
+
+    background: #282828;
+
+    box-shadow:
+        0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+#cover {
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    object-fit: cover;
+
+    opacity: 0;
+
+    transition:
+        opacity 0.4s ease-in-out;
+}
+
+#cover:not([hidden]) {
+    opacity: 1;
+}
+
+
+/* =========================
+   TRACK INFO
+========================= */
+
+.track-info {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: flex-end;
+
+    margin: 20px 0 12px;
+}
+
+.metadata-left {
+    min-width: 0;
+
+    overflow: hidden;
+
+    padding-right: 12px;
+}
+
+#title {
+    margin: 0 0 4px;
+
+    color: #fff;
+
+    font-size: 20px;
+    font-weight: 700;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#artist {
+    margin: 0;
+
+    color: #a7a7a7;
+
+    font-size: 14px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.album {
+    margin: 4px 0 0;
+
+    color: #717171;
+
+    font-size: 11px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.counter {
+    color: #717171;
+
+    font-size: 12px;
+    font-weight: 500;
+
+    white-space: nowrap;
+}
+
+
+/* =========================
+   AUDIO CONTROLS
+========================= */
+
+.audio-controls-visual {
+    display: flex;
+
+    align-items: center;
+
+    gap: 16px;
+
+    margin-bottom: 20px;
+}
+
+.volume-control {
+    display: flex;
+
+    align-items: center;
+}
+
+.volume-bar-bg {
+    position: relative;
+
+    width: 4px;
+    height: 32px;
+
+    background: #4d4d4d;
+
+    border-radius: 2px;
+}
+
+.volume-bar-thumb {
+    position: absolute;
+
+    left: -4px;
+    top: 0;
+
+    width: 12px;
+    height: 20px;
+
+    background: #fff;
+
+    border-radius: 4px;
+
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+
+/* =========================
+   PROGRESS BAR
+========================= */
+
+.progress-section {
+    flex: 1;
+
+    min-width: 0;
+}
+
+.progress-bar-bg {
+    position: relative;
+
+    width: 100%;
+    height: 4px;
+
+    background: #4d4d4d;
+
+    border-radius: 2px;
+
+    cursor: pointer;
+
+    touch-action: none;
+}
+
+.progress-bar-fill {
+    position: relative;
+
+    width: 0;
+    height: 100%;
+
+    background: #fff;
+
+    border-radius: 2px;
+}
+
+.progress-bar-fill::after {
+    content: "";
+
+    position: absolute;
+
+    right: -5px;
+    top: 50%;
+
+    width: 10px;
+    height: 10px;
+
+    transform:
+        translateY(-50%);
+
+    background: #fff;
+
+    border-radius: 50%;
+
+    box-shadow:
+        0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.progress-times {
+    display: flex;
+
+    justify-content: space-between;
+
+    margin-top: 6px;
+
+    color: #a7a7a7;
+
+    font-size: 11px;
+}
+
+
+/* =========================
+   PLAYER BUTTONS
+========================= */
+
+.controls {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 24px;
+
+    margin-top: 10px;
+}
+
+.controls button {
+    display: grid;
+
+    place-items: center;
+
+    background: transparent;
+
+    color: #b3b3b3;
+
+    font-size: 24px;
+
+    transition:
+        color 0.2s,
+        transform 0.1s;
+}
+
+.controls button:hover {
+    color: #fff;
+}
+
+.controls button:active {
+    transform: scale(0.92);
+}
+
+#play {
+    width: 64px;
+    height: 64px;
+
+    border-radius: 50%;
+
+    background: #fff;
+    color: #000;
+
+    font-size: 20px;
+
+    box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+#play:hover {
+    background: #f0f0f0;
+
+    transform: scale(1.04);
+}
+
+
+/* =========================
+   AUDIUS LIBRARY
+========================= */
+
+.library {
+    margin-top: 16px;
+
+    padding: 16px 20px;
+
+    border-radius: 16px;
+
+    background: #181818;
+}
+
+.library h2 {
+    margin: 0 0 12px;
+
+    color: #b3b3b3;
+
+    font-size: 13px;
+    font-weight: 600;
+}
+
+
+/* =========================
+   AUDIUS SEARCH
+========================= */
+
+.audius-input {
+    display: flex;
+
+    gap: 8px;
+
+    width: 100%;
+}
+
+#audiusSearch {
+    min-width: 0;
+
+    flex: 1;
+
+    padding: 10px 12px;
+
+    border: 1px solid transparent;
+
+    border-radius: 8px;
+
+    outline: none;
+
+    background: #282828;
+
+    color: #fff;
+
+    font-size: 13px;
+}
+
+#audiusSearch::placeholder {
+    color: #717171;
+}
+
+#audiusSearch:focus {
+    border-color: #555;
+}
+
+#searchAudius {
+    padding: 10px 16px;
+
+    border-radius: 8px;
+
+    background: #282828;
+
+    color: #fff;
+
+    font-size: 13px;
+    font-weight: 500;
+
+    transition:
+        background 0.2s,
+        transform 0.1s;
+}
+
+#searchAudius:hover {
+    background: #3e3e3e;
+}
+
+#searchAudius:active {
+    transform: scale(0.97);
+}
+
+
+/* =========================
+   AUDIUS RESULTS
+========================= */
+
+.audius-results {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 8px;
+
+    margin-top: 12px;
+
+    max-height: 320px;
+
+    overflow-y: auto;
+}
+
+.audius-results:empty {
+    display: none;
+}
+
+.audius-result {
+    display: flex;
+
+    align-items: center;
+
+    gap: 10px;
+
+    width: 100%;
+
+    padding: 8px;
+
+    border-radius: 10px;
+
+    background: #222;
+
+    color: #fff;
+
+    text-align: left;
+
+    transition:
+        background 0.2s,
+        transform 0.1s;
+}
+
+.audius-result:hover {
+    background: #2d2d2d;
+}
+
+.audius-result:active {
+    transform: scale(0.98);
+}
+
+.audius-result-cover {
+    flex: 0 0 48px;
+
+    width: 48px;
+    height: 48px;
+
+    object-fit: cover;
+
+    border-radius: 6px;
+
+    background: #333;
+}
+
+.audius-result-info {
+    min-width: 0;
+
+    flex: 1;
+}
+
+.audius-result-title {
+    margin: 0;
+
+    color: #fff;
+
+    font-size: 13px;
+    font-weight: 600;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.audius-result-artist {
+    margin: 3px 0 0;
+
+    color: #888;
+
+    font-size: 11px;
+
+    overflow: hidden;
+
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+
+/* =========================
+   SPLASH SCREEN
+========================= */
+
+#splash-screen {
+    position: fixed;
+
+    inset: 0;
+
+    width: 100vw;
+    height: 100vh;
+
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    z-index: 999999;
+
+    background: #0d0d0d;
+
+    color: #fff;
+
+    overflow: hidden;
+
+    user-select: none;
+
+    opacity: 1;
+
+    visibility: visible;
+
+    transition:
+        opacity 0.7s ease,
+        visibility 0.7s ease;
+}
+
+#splash-screen.hidden {
+    opacity: 0;
+
+    visibility: hidden;
+
+    pointer-events: none;
+}
+
+.splash-content {
+    width: min(90%, 420px);
+
+    display: flex;
+
+    flex-direction: column;
+
+    align-items: center;
+
+    text-align: center;
+
+    animation:
+        splash-enter 0.9s
+        cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.splash-logo {
+    display: flex;
+
+    align-items: center;
+    justify-content: center;
+
+    gap: 10px;
+
+    font-size: 42px;
+    font-weight: 800;
+
+    letter-spacing: 3px;
+}
+
+.splash-logo .apollo {
+    color: #fff;
+}
+
+.splash-logo .music {
+    color: #72ff72;
+
+    text-shadow:
+        0 0 20px
+        rgba(114, 255, 114, 0.35);
+}
+
+.splash-version {
+    margin-top: 8px;
+
+    color: #666;
+
+    font-size: 11px;
+    font-weight: 500;
+
+    letter-spacing: 2px;
+}
+
+.splash-loader {
+    width: min(300px, 80%);
+    height: 4px;
+
+    margin-top: 50px;
+    margin-bottom: 14px;
+
+    overflow: hidden;
+
+    background: #292929;
+
+    border-radius: 4px;
+}
+
+#splash-progress {
+    width: 0;
+    height: 100%;
+
+    background: #fff;
+
+    border-radius: inherit;
+
+    transition:
+        width 0.3s ease;
+}
+
+#splash-status {
+    margin: 0;
+
+    color: #aaa;
+
+    font-size: 13px;
+}
+
+.splash-author {
+    display: flex;
+
+    flex-direction: column;
+
+    gap: 5px;
+
+    margin-top: 50px;
+
+    font-size: 10px;
+
+    letter-spacing: 1.5px;
+}
+
+.splash-author span {
+    color: #555;
+}
+
+.splash-author strong {
+    color: #777;
+
+    font-size: 13px;
+    font-weight: 500;
+}
+
+
+/* =========================
+   ANIMATION
+========================= */
+
+@keyframes splash-enter {
+
+    from {
+        opacity: 0;
+
+        transform:
+            translateY(30px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform:
+            translateY(0);
+    }
+}
+
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 480px) {
+
+    .app {
+        width: min(
+            calc(100% - 20px),
+            420px
+        );
+
+        padding: 16px 0;
+    }
+
+    .player {
+        padding: 18px;
+    }
+
+    .library {
+        padding: 14px 16px;
+    }
+
+    .splash-logo {
+        font-size: 34px;
+    }
+
+    #title {
+        font-size: 18px;
+    }
+
+}
