@@ -5,13 +5,15 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+    <meta name="theme-color" content="#121212">
+
     <title>ApolloMusic - YouTube</title>
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
     <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
         rel="stylesheet"
     >
 
@@ -20,7 +22,7 @@
 
 <body>
 
-    <!-- SPLASH SCREEN -->
+    <!-- SPLASH -->
 
     <div id="splash-screen">
 
@@ -57,17 +59,36 @@
 
     <main class="app">
 
-        <!-- STATUS -->
+        <!-- HEADER -->
 
-        <header class="header-centered">
+        <header class="header">
 
-            <span class="top-label">
-                Reprodutor YouTube
-            </span>
+            <div class="brand">
 
-            <h1 id="status">
-                Aguardando link.
-            </h1>
+                <div class="brand-mark">
+                    A
+                </div>
+
+                <div class="brand-info">
+
+                    <strong>ApolloMusic</strong>
+
+                    <span>YouTube Player</span>
+
+                </div>
+
+            </div>
+
+
+            <div class="status-area">
+
+                <span class="status-dot"></span>
+
+                <span id="status">
+                    Aguardando link.
+                </span>
+
+            </div>
 
         </header>
 
@@ -76,7 +97,30 @@
 
         <section class="player">
 
-            <!-- YOUTUBE CONTAINER -->
+            <div class="player-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        PLAYER
+                    </span>
+
+                    <h1>
+                        Reproduzindo
+                    </h1>
+
+                </div>
+
+                <div class="source-badge">
+
+                    <span></span>
+
+                    YouTube
+
+                </div>
+
+            </div>
+
 
             <div
                 id="youtubeContainer"
@@ -86,31 +130,63 @@
         </section>
 
 
-        <!-- YOUTUBE INPUT -->
+        <!-- INPUT -->
 
         <section class="library">
 
-            <h2>
-                YouTube
-            </h2>
+            <div class="library-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        ADICIONAR MÚSICA
+                    </span>
+
+                    <h2>
+                        YouTube
+                    </h2>
+
+                </div>
+
+                <span class="section-number">
+                    01
+                </span>
+
+            </div>
 
 
             <div class="youtube-input">
 
-                <input
-                    id="youtubeSearch"
-                    type="url"
-                    placeholder="Cole o link do YouTube (vídeo ou playlist)"
-                    autocomplete="off"
-                    spellcheck="false"
-                >
+                <div class="input-wrap">
+
+                    <span class="input-icon">
+                        ▶
+                    </span>
+
+                    <input
+                        id="youtubeSearch"
+                        type="url"
+                        placeholder="Cole o link do YouTube"
+                        autocomplete="off"
+                        spellcheck="false"
+                    >
+
+                </div>
 
 
                 <button
                     id="searchYoutube"
                     type="button"
                 >
-                    Reproduzir
+
+                    <span>
+                        Reproduzir
+                    </span>
+
+                    <strong>
+                        →
+                    </strong>
+
                 </button>
 
             </div>
@@ -122,6 +198,21 @@
             ></div>
 
         </section>
+
+
+        <footer class="footer">
+
+            <span>
+                APOLLOMUSIC
+            </span>
+
+            <i>•</i>
+
+            <span>
+                YOUTUBE
+            </span>
+
+        </footer>
 
     </main>
 
