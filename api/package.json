@@ -7,8 +7,9 @@
   "scripts": {
     "start": "node server.js"
   },
-  "dependencies": {
+ "dependencies": {
     "cors": "^2.8.5",
-    "express": "^5.1.0"
-  }
+    "express": "^4.21.2",
+    "youtubei.js": "^18.0.0"
 }
+  }
