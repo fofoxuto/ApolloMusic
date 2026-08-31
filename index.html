@@ -1,222 +1,217 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 
-<head>
+<meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+>
 
-    <meta charset="UTF-8">
+<meta
+    name="theme-color"
+    content="#121212"
+>
 
-    <meta
-        name="viewport"
-        content="width=device-width, initial-scale=1.0"
-    >
+<meta
+    name="color-scheme"
+    content="dark"
+>
 
-    <meta
-        name="theme-color"
-        content="#121212"
-    >
-
-    <meta
-        name="color-scheme"
-        content="dark"
-    >
-
-    <title>ApolloMusic — YouTube</title>
+<title>ApolloMusic — YouTube</title>
 
 
-    <link
-        rel="preconnect"
-        href="https://fonts.googleapis.com"
-    >
+<!-- =====================================================
+     FONTES
+====================================================== -->
 
-    <link
-        rel="preconnect"
-        href="https://fonts.gstatic.com"
-        crossorigin
-    >
+<link rel="preconnect" href="https://fonts.googleapis.com">
 
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-        rel="stylesheet"
-    >
+<link
+    rel="preconnect"
+    href="https://fonts.gstatic.com"
+    crossorigin
+>
 
-    <link
-        rel="stylesheet"
-        href="style.css"
-    >
-
-</head>
+<link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
+    rel="stylesheet"
+>
 
 
-<body>
+<!-- =====================================================
+     CSS
+====================================================== -->
+
+<link
+    rel="stylesheet"
+    href="style.css"
+>
+
+</head><body><!-- =====================================================
+     SPLASH
+====================================================== -->
+
+<div
+    id="splash-screen"
+    class="splash-screen"
+>
+
+    <div class="splash-content">
+
+        <div class="splash-logo">
+
+            <span class="apollo">
+                APOLLO
+            </span>
+
+            <span class="music">
+                MUSIC
+            </span>
+
+        </div>
 
 
-    <!-- =====================================================
-         SPLASH
-    ====================================================== -->
+        <div class="splash-version">
+            YOUTUBE PLAYER
+        </div>
 
-    <div
-        id="splash-screen"
-        class="splash-screen"
-    >
 
-        <div class="splash-content">
+        <div class="splash-loader">
 
-            <div class="splash-logo">
+            <div
+                id="splash-progress"
+                class="splash-progress"
+            ></div>
 
-                <span class="apollo">
-                    APOLLO
-                </span>
+        </div>
 
-                <span class="music">
-                    MUSIC
-                </span>
 
-            </div>
+        <p id="splash-status">
+            Inicializando...
+        </p>
 
-            <div class="splash-version">
-                YOUTUBE PLAYER
-            </div>
 
-            <div class="splash-loader">
+        <div class="splash-author">
 
-                <div
-                    id="splash-progress"
-                    class="splash-progress"
-                ></div>
+            <span>
+                DESENVOLVIDO POR
+            </span>
 
-            </div>
-
-            <p id="splash-status">
-                Inicializando...
-            </p>
-
-            <div class="splash-author">
-
-                <span>
-                    DESENVOLVIDO POR
-                </span>
-
-                <strong>
-                    @fofoxuto
-                </strong>
-
-            </div>
+            <strong>
+                @fofoxuto
+            </strong>
 
         </div>
 
     </div>
 
+</div>
 
 
-    <!-- =====================================================
-         APP
-    ====================================================== -->
 
-    <main class="app">
+<!-- =====================================================
+     APP
+====================================================== -->
+
+<main class="app">
 
 
-        <!-- =================================================
-             HEADER
-        ================================================== -->
+    <!-- =================================================
+         HEADER
+    ================================================== -->
 
-        <header class="header">
+    <header class="header">
 
-            <div class="brand">
+        <div class="brand">
 
-                <div class="brand-mark">
-                    A
-                </div>
-
-                <div class="brand-info">
-
-                    <strong>
-                        ApolloMusic
-                    </strong>
-
-                    <span>
-                        YouTube Player
-                    </span>
-
-                </div>
-
+            <div class="brand-mark">
+                A
             </div>
 
 
-            <div class="status-area">
+            <div class="brand-info">
 
-                <span
-                    class="status-dot"
-                    aria-hidden="true"
-                ></span>
+                <strong>
+                    ApolloMusic
+                </strong>
 
-                <span id="status">
-                    Aguardando link.
+                <span>
+                    YouTube Player
                 </span>
 
             </div>
 
-        </header>
+        </div>
+
+
+        <div class="status-area">
+
+            <span
+                class="status-dot"
+                aria-hidden="true"
+            ></span>
+
+            <span id="status">
+                Aguardando link.
+            </span>
+
+        </div>
+
+    </header>
 
 
 
-        <!-- =================================================
-             PLAYER
-        ================================================== -->
+    <!-- =================================================
+         PLAYER
+    ================================================== -->
 
-        <section
-            class="player expressive-card"
-            aria-label="Player"
-        >
+    <section
+        class="player expressive-card"
+        aria-label="Player"
+    >
 
+        <div class="player-header">
 
-            <div class="player-header">
+            <div>
 
-                <div>
+                <span class="eyebrow">
+                    PLAYER
+                </span>
 
-                    <span class="eyebrow">
-                        PLAYER
-                    </span>
-
-                    <h1>
-                        Reproduzindo
-                    </h1>
-
-                </div>
-
-
-                <div
-                    class="source-badge"
-                    aria-label="Fonte: YouTube"
-                >
-
-                    <span></span>
-
-                    YouTube
-
-                </div>
+                <h1>
+                    Reproduzindo
+                </h1>
 
             </div>
 
 
-
-            <!-- =================================================
-                 CAPA
-            ================================================== -->
-
             <div
-                id="coverArea"
-                class="cover-area"
+                class="source-badge"
+                aria-label="Fonte: YouTube"
             >
+
+                <span aria-hidden="true"></span>
+
+                YouTube
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             NOW PLAYING
+        ================================================== -->
+
+        <div class="now-playing">
+
+            <div class="cover-wrap">
 
                 <img
                     id="nowPlayingCover"
                     class="now-playing-cover"
-                    src=""
+                    src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='600'%3E%3Crect width='100%25' height='100%25' fill='%23202020'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%23777777' font-family='Arial' font-size='40'%3EAPOLLOMUSIC%3C/text%3E%3C/svg%3E"
                     alt="Capa da música"
                 >
-
-
-                <div class="cover-overlay"></div>
 
 
                 <button
@@ -224,369 +219,383 @@
                     class="cover-play-button"
                     type="button"
                     aria-label="Reproduzir"
+                    title="Reproduzir"
                 >
                     ▶
                 </button>
 
-
-                <div class="cover-gradient"></div>
-
-
-                <div class="cover-information">
-
-                    <div
-                        id="nowPlayingTitle"
-                        class="cover-title"
-                    >
-                        Nenhuma música
-
-                    </div>
-
-
-                    <div
-                        id="nowPlayingArtist"
-                        class="cover-artist"
-                    >
-                        Adicione uma música do YouTube
-
-                    </div>
-
-                </div>
-
             </div>
 
 
+            <div class="now-playing-info">
 
-            <!-- =================================================
-                 YOUTUBE INVISÍVEL
-            ================================================== -->
+                <span class="now-playing-label">
+                    TOCANDO AGORA
+                </span>
 
-            <div
-                id="youtubeContainer"
-                class="youtube-container"
-                aria-hidden="true"
-            ></div>
+                <h2 id="nowPlayingTitle">
+                    Nenhuma música
+                </h2>
 
-
-
-            <!-- =================================================
-                 CONTROLES
-            ================================================== -->
-
-            <div class="player-controls">
-
-
-                <div class="progress-area">
-
-                    <span
-                        id="currentTime"
-                        class="time-label"
-                    >
-                        0:00
-                    </span>
-
-
-                    <input
-                        id="progressBar"
-                        class="progress-bar"
-                        type="range"
-                        min="0"
-                        max="100"
-                        value="0"
-                        step="0.1"
-                        aria-label="Progresso da música"
-                    >
-
-
-                    <span
-                        id="duration"
-                        class="time-label"
-                    >
-                        0:00
-                    </span>
-
-                </div>
-
-
-
-                <div class="controls-row">
-
-
-                    <button
-                        id="prevButton"
-                        class="m3-button m3-icon-button"
-                        type="button"
-                        aria-label="Música anterior"
-                        title="Anterior"
-                    >
-                        ⏮
-                    </button>
-
-
-                    <button
-                        id="playButton"
-                        class="m3-button m3-play-button"
-                        type="button"
-                        aria-label="Reproduzir"
-                        title="Reproduzir"
-                    >
-                        ▶
-                    </button>
-
-
-                    <button
-                        id="nextButton"
-                        class="m3-button m3-icon-button"
-                        type="button"
-                        aria-label="Próxima música"
-                        title="Próxima"
-                    >
-                        ⏭
-                    </button>
-
-
-                    <button
-                        id="queueButton"
-                        class="m3-button m3-tonal-button"
-                        type="button"
-                        aria-label="Abrir fila"
-                        title="Fila"
-                    >
-
-                        <span class="button-icon">
-                            ☰
-                        </span>
-
-                        <span>
-                            Fila
-                        </span>
-
-                    </button>
-
-                </div>
+                <p id="nowPlayingArtist">
+                    Adicione um link do YouTube
+                </p>
 
             </div>
 
-
-
-            <!-- =================================================
-                 QUEUE
-            ================================================== -->
-
-            <div
-                id="queuePanel"
-                class="queue-panel"
-                aria-hidden="true"
-            >
-
-                <div class="queue-header">
-
-                    <div>
-
-                        <span class="eyebrow">
-                            PRÓXIMAS
-                        </span>
-
-                        <h2>
-                            Fila
-                        </h2>
-
-                    </div>
-
-
-                    <button
-                        id="closeQueue"
-                        class="m3-button m3-small-button"
-                        type="button"
-                    >
-                        Fechar
-                    </button>
-
-                </div>
-
-
-                <div
-                    id="queueList"
-                    class="queue-list"
-                ></div>
-
-            </div>
-
-
-        </section>
+        </div>
 
 
 
         <!-- =================================================
-             ADD MUSIC
+             YOUTUBE PLAYER INVISÍVEL
         ================================================== -->
 
-        <section
-            class="library expressive-card"
-        >
+        <div
+            id="youtubeContainer"
+            class="youtube-container"
+            aria-hidden="true"
+        ></div>
 
-            <div class="library-header">
 
-                <div>
 
-                    <span class="eyebrow">
-                        ADICIONAR MÚSICA
-                    </span>
+        <!-- =================================================
+             CONTROLES
+        ================================================== -->
 
-                    <h2>
-                        YouTube
-                    </h2>
+        <div class="player-controls">
 
-                </div>
 
-                <div class="section-number">
-                    01
-                </div>
+            <div class="progress-area">
+
+                <span
+                    id="currentTime"
+                    class="time-label"
+                >
+                    0:00
+                </span>
+
+
+                <input
+                    id="progressBar"
+                    class="progress-bar"
+                    type="range"
+                    min="0"
+                    max="100"
+                    value="0"
+                    step="0.1"
+                    aria-label="Progresso da música"
+                >
+
+
+                <span
+                    id="duration"
+                    class="time-label"
+                >
+                    0:00
+                </span>
 
             </div>
 
 
-            <div class="youtube-input">
 
-                <div class="input-wrap">
+            <div class="controls-row">
 
-                    <span
-                        class="input-icon"
-                        aria-hidden="true"
-                    >
+                <button
+                    id="prevButton"
+                    class="m3-button m3-icon-button"
+                    type="button"
+                    aria-label="Música anterior"
+                    title="Anterior"
+                >
+                    <span aria-hidden="true">
+                        ⏮
+                    </span>
+                </button>
+
+
+                <button
+                    id="playButton"
+                    class="m3-button m3-play-button"
+                    type="button"
+                    aria-label="Reproduzir"
+                    title="Reproduzir"
+                >
+                    <span aria-hidden="true">
                         ▶
                     </span>
+                </button>
 
-                    <input
-                        id="youtubeSearch"
-                        type="url"
-                        inputmode="url"
-                        placeholder="Cole o link do YouTube"
-                        autocomplete="off"
-                        spellcheck="false"
-                        aria-label="Link do YouTube"
+
+                <button
+                    id="nextButton"
+                    class="m3-button m3-icon-button"
+                    type="button"
+                    aria-label="Próxima música"
+                    title="Próxima"
+                >
+                    <span aria-hidden="true">
+                        ⏭
+                    </span>
+                </button>
+
+
+                <button
+                    id="queueButton"
+                    class="m3-button m3-tonal-button"
+                    type="button"
+                    aria-label="Abrir fila"
+                    title="Fila"
+                >
+
+                    <span
+                        class="button-icon"
+                        aria-hidden="true"
                     >
+                        ☰
+                    </span>
+
+                    <span>
+                        Fila
+                    </span>
+
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+        <!-- =================================================
+             QUEUE
+        ================================================== -->
+
+        <div
+            id="queuePanel"
+            class="queue-panel"
+            aria-hidden="true"
+        >
+
+            <div class="queue-header">
+
+                <div>
+
+                    <span class="eyebrow">
+                        PRÓXIMAS
+                    </span>
+
+                    <h2>
+                        Fila
+                    </h2>
 
                 </div>
 
 
                 <button
-                    id="searchYoutube"
-                    class="add-button"
+                    id="closeQueue"
+                    class="m3-button m3-small-button"
                     type="button"
                 >
-
-                    <span>
-                        Adicionar
-                    </span>
-
-                    <strong>
-                        →
-                    </strong>
-
+                    Fechar
                 </button>
 
             </div>
 
 
             <div
-                id="youtubeResults"
-                class="youtube-results"
+                id="queueList"
+                class="queue-list"
             ></div>
 
-        </section>
+        </div>
+
+    </section>
 
 
 
-        <!-- =================================================
-             INFO
-        ================================================== -->
+    <!-- =================================================
+         ADD MUSIC
+    ================================================== -->
 
-        <section class="quick-info">
+    <section class="library expressive-card">
 
-            <div class="info-chip">
+        <div class="library-header">
 
-                <span class="chip-icon">
-                    ♪
+            <div>
+
+                <span class="eyebrow">
+                    ADICIONAR MÚSICA
                 </span>
 
-                <span>
+                <h2>
                     YouTube
-                </span>
+                </h2>
 
             </div>
 
 
-            <div class="info-chip">
+            <div class="section-number">
+                01
+            </div>
 
-                <span class="chip-icon">
-                    ♫
+        </div>
+
+
+        <div class="youtube-input">
+
+            <div class="input-wrap">
+
+                <span
+                    class="input-icon"
+                    aria-hidden="true"
+                >
+                    ▶
                 </span>
+
+
+                <input
+                    id="youtubeSearch"
+                    type="url"
+                    inputmode="url"
+                    placeholder="Cole o link do YouTube"
+                    autocomplete="off"
+                    spellcheck="false"
+                    aria-label="Link do YouTube"
+                >
+
+            </div>
+
+
+            <button
+                id="searchYoutube"
+                class="add-button"
+                type="button"
+            >
 
                 <span>
-                    Fila local
+                    Adicionar
                 </span>
 
-            </div>
+                <strong aria-hidden="true">
+                    →
+                </strong>
+
+            </button>
+
+        </div>
 
 
-            <div class="info-chip">
+        <div
+            id="youtubeResults"
+            class="youtube-results"
+        ></div>
 
-                <span class="chip-icon">
-                    ◉
-                </span>
-
-                <span>
-                    Player integrado
-                </span>
-
-            </div>
-
-        </section>
+    </section>
 
 
 
-        <!-- =================================================
-             FOOTER
-        ================================================== -->
+    <!-- =================================================
+         INFO
+    ================================================== -->
 
-        <footer class="footer">
+    <section class="quick-info">
 
-            <span>
-                APOLLOMUSIC
+        <div class="info-chip">
+
+            <span
+                class="chip-icon"
+                aria-hidden="true"
+            >
+                ♪
             </span>
 
-            <i>
-                •
-            </i>
-
             <span>
-                YOUTUBE
+                YouTube
             </span>
 
-            <i>
-                •
-            </i>
+        </div>
 
-            <span>
-                @FOFOXUTO
+
+        <div class="info-chip">
+
+            <span
+                class="chip-icon"
+                aria-hidden="true"
+            >
+                ♫
             </span>
 
-        </footer>
+            <span>
+                Fila local
+            </span>
+
+        </div>
 
 
-    </main>
+        <div class="info-chip">
+
+            <span
+                class="chip-icon"
+                aria-hidden="true"
+            >
+                ◉
+            </span>
+
+            <span>
+                Player integrado
+            </span>
+
+        </div>
+
+    </section>
 
 
 
-    <!-- =====================================================
-         YOUTUBE IFRAME API
-    ====================================================== -->
+    <!-- =================================================
+         FOOTER
+    ================================================== -->
 
-    <script src="https://www.youtube.com/iframe_api"></script>
+    <footer class="footer">
 
-    <script src="app.js"></script>
+        <span>
+            APOLLOMUSIC
+        </span>
 
-</body>
+        <i aria-hidden="true">
+            •
+        </i>
 
-</html>
+        <span>
+            YOUTUBE
+        </span>
+
+        <i aria-hidden="true">
+            •
+        </i>
+
+        <span>
+            @FOFOXUTO
+        </span>
+
+    </footer>
+
+</main>
+
+
+
+<!-- =====================================================
+     YOUTUBE IFRAME API
+     ISSO ESTAVA FALTANDO
+====================================================== -->
+
+<script src="https://www.youtube.com/iframe_api"></script>
+
+
+<!-- =====================================================
+     APP
+====================================================== -->
+
+<script src="app.js"></script>
+
+</body></html>
