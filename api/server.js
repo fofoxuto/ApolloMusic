@@ -4,7 +4,6 @@ const cors = require("cors");
 const app = express();
 
 const PORT = process.env.PORT || 10000;
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
 
 
 /* =========================================================
@@ -306,10 +305,6 @@ app.get(
                         "ID do vídeo é obrigatório."
                 });
             }
-
-            // Nota: A API do YouTube requer uma chave de API
-            // Para este projeto, vamos retornar as informações extraídas da URL
-            // Em produção, você deve usar a YouTube Data API
 
             res.json({
 
