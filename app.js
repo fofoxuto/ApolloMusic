@@ -1,11 +1,12 @@
 /* =========================================================
-APOLLOMUSIC
-YouTube Player
-Sem API Key
+   APOLLOMUSIC
+   YouTube Player
+   Sem API Key
 ========================================================= */
 
+
 /* =========================================================
-STATE
+   STATE
 ========================================================= */
 
 let queue = [];
@@ -20,806 +21,958 @@ let progressTimer = null;
 
 let isDraggingProgress = false;
 
-let splashHidden = false;
+let youtubeApiReady = false;
+
 
 /* =========================================================
-ELEMENTS
+   ELEMENTS
 ========================================================= */
 
 const youtubeInput =
-document.getElementById("youtubeSearch");
+    document.getElementById("youtubeSearch");
 
 const addButton =
-document.getElementById("searchYoutube");
+    document.getElementById("searchYoutube");
 
 const youtubeContainer =
-document.getElementById("youtubeContainer");
+    document.getElementById("youtubeContainer");
 
 const youtubeResults =
-document.getElementById("youtubeResults");
+    document.getElementById("youtubeResults");
 
 const nowPlayingCover =
-document.getElementById("nowPlayingCover");
+    document.getElementById("nowPlayingCover");
 
 const nowPlayingTitle =
-document.getElementById("nowPlayingTitle");
+    document.getElementById("nowPlayingTitle");
 
 const nowPlayingArtist =
-document.getElementById("nowPlayingArtist");
+    document.getElementById("nowPlayingArtist");
 
 const playButton =
-document.getElementById("playButton");
+    document.getElementById("playButton");
 
 const coverPlayButton =
-document.getElementById("coverPlayButton");
+    document.getElementById("coverPlayButton");
 
 const prevButton =
-document.getElementById("prevButton");
+    document.getElementById("prevButton");
 
 const nextButton =
-document.getElementById("nextButton");
+    document.getElementById("nextButton");
 
 const queueButton =
-document.getElementById("queueButton");
+    document.getElementById("queueButton");
 
 const closeQueue =
-document.getElementById("closeQueue");
+    document.getElementById("closeQueue");
 
 const queuePanel =
-document.getElementById("queuePanel");
+    document.getElementById("queuePanel");
 
 const queueList =
-document.getElementById("queueList");
+    document.getElementById("queueList");
 
 const progressBar =
-document.getElementById("progressBar");
+    document.getElementById("progressBar");
 
 const currentTimeElement =
-document.getElementById("currentTime");
+    document.getElementById("currentTime");
 
 const durationElement =
-document.getElementById("duration");
+    document.getElementById("duration");
 
 const statusElement =
-document.getElementById("status");
+    document.getElementById("status");
 
 const splashScreen =
-document.getElementById("splash-screen");
+    document.getElementById("splash-screen");
 
 const splashProgress =
-document.getElementById("splash-progress");
+    document.getElementById("splash-progress");
 
 const splashStatus =
-document.getElementById("splash-status");
+    document.getElementById("splash-status");
+
 
 /* =========================================================
-SAFE ELEMENT CHECK
-========================================================= */
-
-function elementExists(element) {
-
-return element !== null;
-
-}
-
-/* =========================================================
-SPLASH
+   SPLASH
 ========================================================= */
 
 function updateSplash(progress, text) {
 
-if (splashProgress) {
+    if (splashProgress) {
+        splashProgress.style.width =
+            `${progress}%`;
+    }
 
-    splashProgress.style.width =
-        `${progress}%`;
-
+    if (splashStatus) {
+        splashStatus.textContent =
+            text;
+    }
 }
 
-
-if (splashStatus) {
-
-    splashStatus.textContent =
-        text;
-
-}
-
-}
 
 function hideSplash() {
 
-if (
-    splashHidden ||
-    !splashScreen
-) {
+    if (!splashScreen) {
+        return;
+    }
 
-    return;
-
+    splashScreen.classList.add("hidden");
 }
 
 
-splashHidden = true;
-
-
 updateSplash(
-    100,
-    "Player pronto!"
+    15,
+    "Carregando interface..."
 );
 
 
 setTimeout(() => {
 
-    splashScreen.classList.add(
-        "hidden"
+    updateSplash(
+        40,
+        "Carregando YouTube..."
     );
-
-}, 350);
-
-}
-
-/*
-
-* Inicialização visual.
-  */
-
-updateSplash(
-20,
-"Carregando interface..."
-);
-
-setTimeout(() => {
-
-updateSplash(
-    50,
-    "Preparando player..."
-);
 
 }, 250);
 
-setTimeout(() => {
-
-updateSplash(
-    75,
-    "Conectando ao YouTube..."
-);
-
-}, 600);
-
-/*
-
-* Se a API do YouTube falhar completamente,
-* não deixa o Splash travado para sempre.
-  */
 
 setTimeout(() => {
 
-if (!playerReady) {
+    if (!youtubeApiReady) {
 
-    updateSplash(
-        90,
-        "Finalizando..."
-    );
+        updateSplash(
+            70,
+            "Preparando player..."
+        );
 
-}
+    }
 
-}, 3000);
+}, 800);
 
-setTimeout(() => {
-
-if (!playerReady) {
-
-    console.warn(
-        "A API do YouTube ainda não ficou pronta."
-    );
-
-    hideSplash();
-
-    setStatus(
-        "YouTube demorou para carregar."
-    );
-
-}
-
-}, 7000);
 
 /* =========================================================
-STATUS
+   STATUS
 ========================================================= */
 
 function setStatus(text) {
 
-if (statusElement) {
-
-    statusElement.textContent =
-        text;
-
+    if (statusElement) {
+        statusElement.textContent = text;
+    }
 }
 
-}
 
 /* =========================================================
-YOUTUBE URL
+   YOUTUBE API
 ========================================================= */
 
-function extractVideoId(url) {
+window.onYouTubeIframeAPIReady =
+    function () {
 
-if (!url) {
+        youtubeApiReady = true;
 
-    return null;
+        updateSplash(
+            90,
+            "Criando player..."
+        );
 
-}
+        createYouTubePlayer();
 
-
-url =
-    url.trim();
-
-
-/*
- * youtu.be/VIDEO
- */
-
-const shortMatch =
-    url.match(
-        /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})/
-    );
+    };
 
 
-if (shortMatch) {
+function createYouTubePlayer() {
 
-    return shortMatch[1];
+    if (
+        typeof YT === "undefined" ||
+        !YT.Player
+    ) {
 
-}
+        setStatus(
+            "YouTube ainda carregando..."
+        );
 
-
-/*
- * youtube.com/watch?v=VIDEO
- */
-
-const watchMatch =
-    url.match(
-        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?[^#]*v=([a-zA-Z0-9_-]{11})/
-    );
+        return;
+    }
 
 
-if (watchMatch) {
+    player =
+        new YT.Player(
+            "youtubeContainer",
+            {
 
-    return watchMatch[1];
+                width: "1",
 
-}
+                height: "1",
 
+                videoId: "",
 
-/*
- * youtube.com/shorts/VIDEO
- */
+                playerVars: {
 
-const shortsMatch =
-    url.match(
-        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/
-    );
+                    controls: 0,
 
+                    modestbranding: 1,
 
-if (shortsMatch) {
+                    playsinline: 1,
 
-    return shortsMatch[1];
+                    autoplay: 0,
 
-}
+                    rel: 0,
 
+                    fs: 0
 
-/*
- * youtube.com/embed/VIDEO
- */
+                },
 
-const embedMatch =
-    url.match(
-        /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/
-    );
+                events: {
 
+                    onReady:
+                        onPlayerReady,
 
-if (embedMatch) {
+                    onStateChange:
+                        onPlayerStateChange,
 
-    return embedMatch[1];
+                    onError:
+                        onPlayerError
+
+                }
+
+            }
+        );
 
 }
 
-
-/*
- * Somente ID
- */
-
-if (
-    /^[a-zA-Z0-9_-]{11}$/.test(url)
-) {
-
-    return url;
-
-}
-
-
-return null;
-
-}
 
 /* =========================================================
-THUMBNAILS
+   PLAYER READY
+========================================================= */
+
+function onPlayerReady() {
+
+    playerReady = true;
+
+    updateSplash(
+        100,
+        "Player pronto!"
+    );
+
+
+    setStatus(
+        queue.length
+            ? "Pronto para reproduzir."
+            : "Aguardando link."
+    );
+
+
+    startProgressTimer();
+
+
+    /*
+     * Se uma música foi adicionada antes
+     * do player terminar de carregar.
+     */
+
+    if (queue.length > 0) {
+
+        const track =
+            queue[currentTrack];
+
+
+        player.cueVideoById(
+            track.id
+        );
+
+    }
+
+
+    /*
+     * Esconde a splash.
+     */
+
+    setTimeout(
+        hideSplash,
+        350
+    );
+
+}
+
+
+/* =========================================================
+   FALLBACK DA SPLASH
+========================================================= */
+
+setTimeout(() => {
+
+    /*
+     * Evita que uma falha no carregamento da API
+     * deixe o aplicativo preso para sempre na splash.
+     */
+
+    if (!playerReady) {
+
+        updateSplash(
+            100,
+            "Interface pronta."
+        );
+
+
+        setTimeout(
+            hideSplash,
+            300
+        );
+
+
+        setStatus(
+            "YouTube ainda não está disponível."
+        );
+
+    }
+
+}, 8000);
+
+
+/* =========================================================
+   URL DO YOUTUBE
+========================================================= */
+
+function extractVideoId(value) {
+
+    if (!value) {
+        return null;
+    }
+
+
+    const input =
+        value.trim();
+
+
+    /*
+     * Caso seja somente o ID.
+     */
+
+    if (
+        /^[a-zA-Z0-9_-]{11}$/.test(input)
+    ) {
+
+        return input;
+
+    }
+
+
+    let url;
+
+
+    try {
+
+        /*
+         * Aceita links sem https://.
+         */
+
+        url =
+            new URL(
+                input.startsWith("http")
+                    ? input
+                    : `https://${input}`
+            );
+
+    } catch {
+
+        return null;
+
+    }
+
+
+    const hostname =
+        url.hostname
+            .toLowerCase()
+            .replace(/^www\./, "");
+
+
+    /*
+     * youtu.be/VIDEO
+     */
+
+    if (
+        hostname === "youtu.be"
+    ) {
+
+        const id =
+            url.pathname
+                .split("/")
+                .filter(Boolean)[0];
+
+
+        if (
+            id &&
+            /^[a-zA-Z0-9_-]{11}$/.test(id)
+        ) {
+
+            return id;
+
+        }
+
+    }
+
+
+    /*
+     * youtube.com
+     */
+
+    if (
+        hostname === "youtube.com" ||
+        hostname === "m.youtube.com"
+    ) {
+
+        /*
+         * /watch?v=VIDEO
+         */
+
+        if (
+            url.pathname === "/watch"
+        ) {
+
+            const id =
+                url.searchParams.get("v");
+
+
+            if (
+                id &&
+                /^[a-zA-Z0-9_-]{11}$/.test(id)
+            ) {
+
+                return id;
+
+            }
+
+        }
+
+
+        /*
+         * /shorts/VIDEO
+         */
+
+        if (
+            url.pathname.startsWith(
+                "/shorts/"
+            )
+        ) {
+
+            const id =
+                url.pathname
+                    .split("/")[2];
+
+
+            if (
+                id &&
+                /^[a-zA-Z0-9_-]{11}$/.test(id)
+            ) {
+
+                return id;
+
+            }
+
+        }
+
+
+        /*
+         * /embed/VIDEO
+         */
+
+        if (
+            url.pathname.startsWith(
+                "/embed/"
+            )
+        ) {
+
+            const id =
+                url.pathname
+                    .split("/")[2];
+
+
+            if (
+                id &&
+                /^[a-zA-Z0-9_-]{11}$/.test(id)
+            ) {
+
+                return id;
+
+            }
+
+        }
+
+
+        /*
+         * /live/VIDEO
+         */
+
+        if (
+            url.pathname.startsWith(
+                "/live/"
+            )
+        ) {
+
+            const id =
+                url.pathname
+                    .split("/")[2];
+
+
+            if (
+                id &&
+                /^[a-zA-Z0-9_-]{11}$/.test(id)
+            ) {
+
+                return id;
+
+            }
+
+        }
+
+    }
+
+
+    return null;
+}
+
+
+/* =========================================================
+   THUMBNAILS
 ========================================================= */
 
 function getThumbnail(videoId) {
 
-return (
-    `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
-);
-
+    return (
+        `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+    );
 }
 
-function getFallbackThumbnail(videoId) {
 
-return (
-    `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
-);
+function getHighQualityThumbnail(videoId) {
 
+    return (
+        `https://i.ytimg.com/vi/${videoId}/maxresdefault.jpg`
+    );
 }
+
 
 /* =========================================================
-METADATA
+   METADATA
 ========================================================= */
 
 async function getVideoMetadata(videoId) {
 
-const fallback = {
+    const fallback = {
 
-    title:
-        "Vídeo do YouTube",
+        title:
+            "Vídeo do YouTube",
 
-    artist:
-        "YouTube",
+        artist:
+            "YouTube",
 
-    thumbnail:
-        getThumbnail(videoId)
+        thumbnail:
+            getThumbnail(videoId)
 
-};
+    };
 
 
-try {
+    try {
 
-    const response =
-        await fetch(
-            `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+        const response =
+            await fetch(
+                `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+            );
+
+
+        if (!response.ok) {
+            throw new Error(
+                "oEmbed indisponível"
+            );
+        }
+
+
+        const data =
+            await response.json();
+
+
+        return {
+
+            title:
+                data.title ||
+                fallback.title,
+
+            artist:
+                data.author_name ||
+                fallback.artist,
+
+            thumbnail:
+                data.thumbnail_url ||
+                fallback.thumbnail
+
+        };
+
+    } catch (error) {
+
+        console.warn(
+            "Metadata não disponível:",
+            error
         );
 
 
-    if (!response.ok) {
+        return fallback;
 
-        throw new Error(
-            "Falha ao consultar oEmbed."
+    }
+
+}
+
+
+/* =========================================================
+   ADD TRACK
+========================================================= */
+
+async function addTrack(value) {
+
+    const videoId =
+        extractVideoId(value);
+
+
+    if (!videoId) {
+
+        setStatus(
+            "Link do YouTube inválido."
         );
+
+        return;
 
     }
 
 
-    const data =
-        await response.json();
+    /*
+     * Evita adicionar o mesmo vídeo várias vezes
+     * seguidas.
+     */
+
+    if (
+        queue.some(
+            track =>
+                track.id === videoId
+        )
+    ) {
+
+        setStatus(
+            "Essa música já está na fila."
+        );
+
+        return;
+
+    }
 
 
-    return {
+    setStatus(
+        "Obtendo informações..."
+    );
+
+
+    const metadata =
+        await getVideoMetadata(
+            videoId
+        );
+
+
+    const track = {
+
+        id:
+            videoId,
 
         title:
-            data.title ||
-            fallback.title,
+            metadata.title,
 
         artist:
-            data.author_name ||
-            fallback.artist,
+            metadata.artist,
 
         thumbnail:
-            data.thumbnail_url ||
-            fallback.thumbnail
+            metadata.thumbnail ||
+            getThumbnail(videoId),
+
+        highQualityThumbnail:
+            getHighQualityThumbnail(
+                videoId
+            ),
+
+        fallbackThumbnail:
+            getThumbnail(videoId)
 
     };
 
-} catch (error) {
 
-    console.warn(
-        "Metadata indisponível:",
-        error
-    );
+    queue.push(track);
 
 
-    return fallback;
+    renderQueue();
+
+
+    youtubeInput.value = "";
+
+
+    if (
+        queue.length === 1
+    ) {
+
+        currentTrack = 0;
+
+        loadTrack(
+            0,
+            true
+        );
+
+    } else {
+
+        setStatus(
+            "Adicionada à fila."
+        );
+
+    }
 
 }
 
-}
 
 /* =========================================================
-ADD TRACK
+   LOAD TRACK
 ========================================================= */
 
-async function addTrack(url) {
+function loadTrack(
+    index,
+    autoplay = false
+) {
 
-const videoId =
-    extractVideoId(url);
+    if (
+        index < 0 ||
+        index >= queue.length
+    ) {
 
+        return;
 
-if (!videoId) {
-
-    setStatus(
-        "Link do YouTube inválido."
-    );
-
-    return;
-
-}
+    }
 
 
-addButton.disabled =
-    true;
+    currentTrack =
+        index;
 
 
-setStatus(
-    "Obtendo informações..."
-);
+    const track =
+        queue[index];
 
-
-/*
- * A capa já é conhecida pelo ID.
- * Não precisamos esperar o oEmbed
- * para mostrar a imagem.
- */
-
-const immediateThumbnail =
-    getThumbnail(videoId);
-
-
-const immediateTrack = {
-
-    id:
-        videoId,
-
-    title:
-        "Carregando música...",
-
-    artist:
-        "YouTube",
-
-    thumbnail:
-        immediateThumbnail,
-
-    fallbackThumbnail:
-        getFallbackThumbnail(videoId)
-
-};
-
-
-/*
- * Se for a primeira música,
- * adicionamos imediatamente.
- */
-
-const isFirst =
-    queue.length === 0;
-
-
-queue.push(
-    immediateTrack
-);
-
-
-currentTrack =
-    queue.length - 1;
-
-
-renderQueue();
-
-
-if (isFirst) {
-
-    updateNowPlaying(
-        immediateTrack
-    );
-
-}
-
-
-/*
- * Busca título/artista sem bloquear
- * a criação da música.
- */
-
-const metadata =
-    await getVideoMetadata(
-        videoId
-    );
-
-
-const index =
-    queue.findIndex(
-        track =>
-            track.id === videoId &&
-            track === immediateTrack
-    );
-
-
-if (index !== -1) {
-
-    queue[index].title =
-        metadata.title;
-
-    queue[index].artist =
-        metadata.artist;
 
     /*
-     * Sempre prioriza a thumbnail direta.
-     * Isso evita depender do backend.
+     * Atualiza a interface antes do YouTube.
      */
-
-    queue[index].thumbnail =
-        getThumbnail(videoId);
-
-}
-
-
-renderQueue();
-
-
-if (isFirst) {
-
-    updateNowPlaying(
-        queue[0]
-    );
-
-    loadTrack(
-        0,
-        true
-    );
-
-} else {
-
-    setStatus(
-        "Adicionada à fila."
-    );
-
-}
-
-
-youtubeInput.value =
-    "";
-
-
-addButton.disabled =
-    false;
-
-}
-
-/* =========================================================
-NOW PLAYING
-========================================================= */
-
-function updateNowPlaying(track) {
-
-if (!track) {
-
-    return;
-
-}
-
-
-if (
-    elementExists(nowPlayingTitle)
-) {
 
     nowPlayingTitle.textContent =
         track.title;
 
-}
-
-
-if (
-    elementExists(nowPlayingArtist)
-) {
 
     nowPlayingArtist.textContent =
         track.artist;
 
-}
+
+    /*
+     * Primeiro usa a thumbnail do oEmbed.
+     */
+
+    nowPlayingCover.classList.remove(
+        "loaded"
+    );
 
 
-if (
-    elementExists(nowPlayingCover)
-) {
+    nowPlayingCover.src =
+        track.thumbnail;
 
-    nowPlayingCover.onerror =
+
+    nowPlayingCover.onload =
         function () {
 
-            this.onerror =
-                null;
-
-            this.src =
-                track.fallbackThumbnail;
+            this.classList.add(
+                "loaded"
+            );
 
         };
 
 
-    /*
-     * Mostra a capa imediatamente.
-     */
+    nowPlayingCover.onerror =
+        function () {
 
-    nowPlayingCover.src =
-        track.thumbnail ||
-        getThumbnail(track.id);
+            if (
+                this.src !==
+                track.fallbackThumbnail
+            ) {
 
-}
-
-}
-
-/* =========================================================
-LOAD TRACK
-========================================================= */
-
-function loadTrack(
-index,
-autoplay = false
-) {
-
-if (
-    index < 0 ||
-    index >= queue.length
-) {
-
-    return;
-
-}
-
-
-currentTrack =
-    index;
-
-
-const track =
-    queue[index];
-
-
-/*
- * Atualiza interface antes
- * de mexer no YouTube.
- */
-
-updateNowPlaying(
-    track
-);
-
-
-renderQueue();
-
-
-setStatus(
-    "Carregando música..."
-);
-
-
-/*
- * Se o player ainda não está pronto,
- * onPlayerReady() vai carregar depois.
- */
-
-if (
-    !player ||
-    !playerReady
-) {
-
-    setStatus(
-        "Player carregando..."
-    );
-
-    return;
-
-}
-
-
-try {
-
-    player.loadVideoById(
-        track.id
-    );
-
-
-    if (autoplay) {
-
-        /*
-         * Alguns navegadores bloqueiam
-         * autoplay com áudio.
-         */
-
-        setTimeout(() => {
-
-            try {
-
-                player.playVideo();
-
-            } catch (error) {
-
-                console.warn(
-                    "Autoplay bloqueado:",
-                    error
-                );
+                this.src =
+                    track.fallbackThumbnail;
 
             }
 
-        }, 150);
+        };
 
-    }
 
-} catch (error) {
+    renderQueue();
 
-    console.error(
-        "Erro ao carregar vídeo:",
-        error
-    );
+
+    progressBar.value = 0;
+
+    currentTimeElement.textContent =
+        "0:00";
+
+    durationElement.textContent =
+        "0:00";
 
 
     setStatus(
-        "Erro ao carregar música."
+        "Carregando música..."
     );
 
-}
+
+    /*
+     * O player ainda não terminou de carregar.
+     */
+
+    if (
+        !player ||
+        !playerReady
+    ) {
+
+        setStatus(
+            "Player carregando..."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        player.loadVideoById(
+            track.id
+        );
+
+
+        if (autoplay) {
+
+            /*
+             * O navegador pode bloquear
+             * autoplay com áudio.
+             */
+
+            setTimeout(() => {
+
+                try {
+
+                    player.playVideo();
+
+                } catch (error) {
+
+                    console.warn(
+                        "Autoplay bloqueado:",
+                        error
+                    );
+
+                }
+
+            }, 150);
+
+        }
+
+    } catch (error) {
+
+        console.error(
+            "Erro ao carregar vídeo:",
+            error
+        );
+
+
+        setStatus(
+            "Erro ao carregar música."
+        );
+
+    }
 
 }
+
 
 /* =========================================================
-PLAY / PAUSE
+   PLAY / PAUSE
 ========================================================= */
 
 function togglePlay() {
 
-if (
-    !player ||
-    !playerReady
-) {
+    if (
+        !player ||
+        !playerReady
+    ) {
 
-    setStatus(
-        "Player ainda carregando..."
-    );
+        setStatus(
+            "Player ainda carregando..."
+        );
 
-    return;
+        return;
+
+    }
+
+
+    if (
+        queue.length === 0
+    ) {
+
+        setStatus(
+            "Adicione uma música primeiro."
+        );
+
+        return;
+
+    }
+
+
+    const state =
+        player.getPlayerState();
+
+
+    if (
+        state ===
+        YT.PlayerState.PLAYING
+    ) {
+
+        player.pauseVideo();
+
+    } else {
+
+        player.playVideo();
+
+    }
 
 }
 
-
-const state =
-    player.getPlayerState();
-
-
-if (
-    state ===
-    YT.PlayerState.PLAYING
-) {
-
-    player.pauseVideo();
-
-} else {
-
-    player.playVideo();
-
-}
-
-}
 
 /* =========================================================
-PLAY BUTTON UI
+   PLAY BUTTONS
 ========================================================= */
 
 function updatePlayButtons(
-playing
+    playing
 ) {
 
-const symbol =
-    playing
-        ? "❚❚"
-        : "▶";
+    const symbol =
+        playing
+            ? "❚❚"
+            : "▶";
 
 
-if (playButton) {
+    playButton.textContent =
+        symbol;
 
-    playButton.innerHTML =
-        `<span aria-hidden="true">${symbol}</span>`;
+
+    coverPlayButton.textContent =
+        symbol;
+
 
     playButton.setAttribute(
         "aria-label",
@@ -828,13 +981,6 @@ if (playButton) {
             : "Reproduzir"
     );
 
-}
-
-
-if (coverPlayButton) {
-
-    coverPlayButton.innerHTML =
-        symbol;
 
     coverPlayButton.setAttribute(
         "aria-label",
@@ -851,163 +997,146 @@ if (coverPlayButton) {
 
 }
 
-}
 
 /* =========================================================
-TIME
+   TIME
 ========================================================= */
 
 function formatTime(seconds) {
 
-if (
-    !seconds ||
-    !Number.isFinite(seconds)
-) {
+    if (
+        !Number.isFinite(seconds) ||
+        seconds < 0
+    ) {
 
-    return "0:00";
+        return "0:00";
 
-}
-
-
-seconds =
-    Math.floor(seconds);
+    }
 
 
-const minutes =
-    Math.floor(
-        seconds / 60
+    seconds =
+        Math.floor(seconds);
+
+
+    const minutes =
+        Math.floor(
+            seconds / 60
+        );
+
+
+    const remaining =
+        seconds % 60;
+
+
+    return (
+        `${minutes}:${String(remaining).padStart(2, "0")}`
     );
 
-
-const remaining =
-    seconds % 60;
-
-
-return (
-    `${minutes}:${String(remaining).padStart(2, "0")}`
-);
-
 }
 
+
 /* =========================================================
-PROGRESS
+   PROGRESS
 ========================================================= */
 
 function updateProgress() {
 
-if (
-    !player ||
-    !playerReady ||
-    isDraggingProgress
-) {
+    if (
+        !player ||
+        !playerReady ||
+        isDraggingProgress
+    ) {
 
-    return;
+        return;
 
-}
-
-
-let current = 0;
-
-let duration = 0;
+    }
 
 
-try {
+    try {
 
-    current =
-        player.getCurrentTime();
-
-    duration =
-        player.getDuration();
-
-} catch {
-
-    return;
-
-}
+        const current =
+            player.getCurrentTime();
 
 
-if (
-    !duration ||
-    !Number.isFinite(duration)
-) {
-
-    return;
-
-}
+        const duration =
+            player.getDuration();
 
 
-const percentage =
-    Math.min(
-        100,
-        Math.max(
-            0,
-            (current / duration) * 100
-        )
-    );
+        if (
+            !Number.isFinite(duration) ||
+            duration <= 0
+        ) {
+
+            return;
+
+        }
 
 
-if (progressBar) {
+        const percentage =
+            Math.min(
+                100,
+                Math.max(
+                    0,
+                    (current / duration) * 100
+                )
+            );
 
-    progressBar.value =
-        percentage;
 
-}
+        progressBar.value =
+            percentage;
 
 
-if (currentTimeElement) {
+        currentTimeElement.textContent =
+            formatTime(current);
 
-    currentTimeElement.textContent =
-        formatTime(current);
+
+        durationElement.textContent =
+            formatTime(duration);
+
+    } catch {
+
+        /*
+         * O player ainda pode estar
+         * inicializando.
+         */
+
+    }
 
 }
 
-
-if (durationElement) {
-
-    durationElement.textContent =
-        formatTime(duration);
-
-}
-
-}
-
-/* =========================================================
-PROGRESS TIMER
-========================================================= */
 
 function startProgressTimer() {
 
-stopProgressTimer();
+    stopProgressTimer();
 
 
-progressTimer =
-    setInterval(
-        updateProgress,
-        500
-    );
+    progressTimer =
+        setInterval(
+            updateProgress,
+            500
+        );
 
 }
+
 
 function stopProgressTimer() {
 
-if (progressTimer) {
+    if (progressTimer) {
 
-    clearInterval(
-        progressTimer
-    );
+        clearInterval(
+            progressTimer
+        );
 
-    progressTimer =
-        null;
+        progressTimer = null;
+
+    }
 
 }
 
-}
 
 /* =========================================================
-SEEK
+   SEEK
 ========================================================= */
-
-if (progressBar) {
 
 progressBar.addEventListener(
     "input",
@@ -1031,7 +1160,9 @@ progressBar.addEventListener(
             player.getDuration();
 
 
-        if (!duration) {
+        if (
+            !duration
+        ) {
 
             return;
 
@@ -1046,12 +1177,8 @@ progressBar.addEventListener(
             ) * duration;
 
 
-        if (currentTimeElement) {
-
-            currentTimeElement.textContent =
-                formatTime(time);
-
-        }
+        currentTimeElement.textContent =
+            formatTime(time);
 
     }
 );
@@ -1107,522 +1234,397 @@ progressBar.addEventListener(
     }
 );
 
-}
 
 /* =========================================================
-QUEUE
+   QUEUE
 ========================================================= */
 
 function renderQueue() {
 
-if (!queueList) {
-
-    return;
-
-}
+    queueList.innerHTML = "";
 
 
-queueList.innerHTML =
-    "";
+    queue.forEach(
+        (track, index) => {
+
+            const item =
+                document.createElement(
+                    "button"
+                );
 
 
-queue.forEach(
-    (track, index) => {
-
-        const item =
-            document.createElement(
-                "button"
-            );
+            item.type =
+                "button";
 
 
-        item.type =
-            "button";
+            item.className =
+                "queue-item";
 
 
-        item.className =
-            "queue-item";
+            if (
+                index === currentTrack
+            ) {
 
-
-        if (
-            index === currentTrack
-        ) {
-
-            item.classList.add(
-                "current"
-            );
-
-        }
-
-
-        const image =
-            document.createElement(
-                "img"
-            );
-
-
-        image.src =
-            track.thumbnail ||
-            getThumbnail(track.id);
-
-
-        image.alt =
-            "";
-
-
-        image.onerror =
-            function () {
-
-                this.onerror =
-                    null;
-
-                this.src =
-                    track.fallbackThumbnail;
-
-            };
-
-
-        const info =
-            document.createElement(
-                "div"
-            );
-
-
-        info.className =
-            "queue-item-info";
-
-
-        const title =
-            document.createElement(
-                "div"
-            );
-
-
-        title.className =
-            "queue-item-title";
-
-
-        title.textContent =
-            track.title;
-
-
-        const artist =
-            document.createElement(
-                "div"
-            );
-
-
-        artist.className =
-            "queue-item-subtitle";
-
-
-        artist.textContent =
-            track.artist;
-
-
-        info.appendChild(
-            title
-        );
-
-        info.appendChild(
-            artist
-        );
-
-
-        item.appendChild(
-            image
-        );
-
-        item.appendChild(
-            info
-        );
-
-
-        item.addEventListener(
-            "click",
-            () => {
-
-                loadTrack(
-                    index,
-                    true
+                item.classList.add(
+                    "current"
                 );
 
             }
-        );
 
 
-        queueList.appendChild(
-            item
-        );
+            const image =
+                document.createElement(
+                    "img"
+                );
 
-    }
-);
+
+            image.src =
+                track.thumbnail;
+
+
+            image.alt =
+                "";
+
+
+            image.onerror =
+                () => {
+
+                    image.src =
+                        track.fallbackThumbnail;
+
+                };
+
+
+            const info =
+                document.createElement(
+                    "div"
+                );
+
+
+            info.className =
+                "queue-item-info";
+
+
+            const title =
+                document.createElement(
+                    "div"
+                );
+
+
+            title.className =
+                "queue-item-title";
+
+
+            title.textContent =
+                track.title;
+
+
+            const artist =
+                document.createElement(
+                    "div"
+                );
+
+
+            artist.className =
+                "queue-item-subtitle";
+
+
+            artist.textContent =
+                track.artist;
+
+
+            info.appendChild(
+                title
+            );
+
+
+            info.appendChild(
+                artist
+            );
+
+
+            item.appendChild(
+                image
+            );
+
+
+            item.appendChild(
+                info
+            );
+
+
+            item.addEventListener(
+                "click",
+                () => {
+
+                    loadTrack(
+                        index,
+                        true
+                    );
+
+                }
+            );
+
+
+            queueList.appendChild(
+                item
+            );
+
+        }
+    );
 
 }
 
+
 /* =========================================================
-NEXT
+   NEXT
 ========================================================= */
 
 function nextTrack() {
 
-if (
-    queue.length === 0
-) {
-
-    return;
-
-}
-
-
-const next =
-    currentTrack + 1;
-
-
-if (
-    next >= queue.length
-) {
-
-    if (player) {
-
-        try {
-
-            player.pauseVideo();
-
-        } catch {}
-
-    }
-
-
-    setStatus(
-        "Fila finalizada."
-    );
-
-
-    return;
-
-}
-
-
-loadTrack(
-    next,
-    true
-);
-
-}
-
-/* =========================================================
-PREVIOUS
-========================================================= */
-
-function previousTrack() {
-
-if (
-    queue.length === 0
-) {
-
-    return;
-
-}
-
-
-const previous =
-    currentTrack - 1;
-
-
-if (
-    previous < 0
-) {
-
-    if (player && playerReady) {
-
-        player.seekTo(
-            0,
-            true
-        );
-
-    }
-
-    return;
-
-}
-
-
-loadTrack(
-    previous,
-    true
-);
-
-}
-
-/* =========================================================
-YOUTUBE IFRAME API
-========================================================= */
-
-window.onYouTubeIframeAPIReady =
-function () {
-
-    console.log(
-        "YouTube IFrame API pronta."
-    );
-
-
-    updateSplash(
-        92,
-        "Inicializando player..."
-    );
-
-
-    if (!youtubeContainer) {
-
-        console.error(
-            "youtubeContainer não encontrado."
-        );
-
-        hideSplash();
+    if (
+        queue.length === 0
+    ) {
 
         return;
 
     }
 
 
-    player =
-        new YT.Player(
-            "youtubeContainer",
-            {
-
-                /*
-                 * O CSS torna o player invisível.
-                 * Ele continua existindo e funcionando.
-                 */
-
-                width:
-                    "1",
-
-                height:
-                    "1",
-
-                playerVars: {
-
-                    controls:
-                        0,
-
-                    modestbranding:
-                        1,
-
-                    playsinline:
-                        1,
-
-                    autoplay:
-                        0,
-
-                    rel:
-                        0
-
-                },
+    const next =
+        currentTrack + 1;
 
 
-                events: {
+    if (
+        next >= queue.length
+    ) {
 
-                    onReady:
-                        onPlayerReady,
+        if (player) {
 
-                    onStateChange:
-                        onPlayerStateChange,
+            player.pauseVideo();
 
-                    onError:
-                        onPlayerError
+        }
 
-                }
 
-            }
+        updatePlayButtons(
+            false
         );
 
-};
 
-/* =========================================================
-PLAYER READY
-========================================================= */
-
-function onPlayerReady() {
-
-console.log(
-    "ApolloMusic: player pronto."
-);
+        setStatus(
+            "Fila finalizada."
+        );
 
 
-playerReady =
-    true;
+        return;
+
+    }
 
 
-startProgressTimer();
-
-
-setStatus(
-    queue.length > 0
-        ? "Pronto para reproduzir."
-        : "Aguardando link."
-);
-
-
-hideSplash();
-
-
-/*
- * Se uma música foi adicionada
- * antes do player ficar pronto,
- * carrega agora.
- */
-
-if (
-    queue.length > 0 &&
-    queue[currentTrack]
-) {
-
-    const track =
-        queue[currentTrack];
-
-
-    updateNowPlaying(
-        track
-    );
-
-
-    player.cueVideoById(
-        track.id
-    );
-
-}
-
-}
-
-/* =========================================================
-PLAYER STATE
-========================================================= */
-
-function onPlayerStateChange(event) {
-
-if (
-    !window.YT ||
-    !YT.PlayerState
-) {
-
-    return;
-
-}
-
-
-if (
-    event.data ===
-    YT.PlayerState.PLAYING
-) {
-
-    updatePlayButtons(
+    loadTrack(
+        next,
         true
     );
 
+}
 
-    setStatus(
-        "Reproduzindo."
+
+/* =========================================================
+   PREVIOUS
+========================================================= */
+
+function previousTrack() {
+
+    if (
+        queue.length === 0
+    ) {
+
+        return;
+
+    }
+
+
+    /*
+     * Se já passou de 3 segundos,
+     * volta para o começo da música.
+     */
+
+    if (
+        player &&
+        playerReady &&
+        player.getCurrentTime() > 3
+    ) {
+
+        player.seekTo(
+            0,
+            true
+        );
+
+        return;
+
+    }
+
+
+    const previous =
+        currentTrack - 1;
+
+
+    if (
+        previous < 0
+    ) {
+
+        if (
+            player &&
+            playerReady
+        ) {
+
+            player.seekTo(
+                0,
+                true
+            );
+
+        }
+
+        return;
+
+    }
+
+
+    loadTrack(
+        previous,
+        true
     );
-
-
-    startProgressTimer();
 
 }
 
 
-else if (
-    event.data ===
-    YT.PlayerState.PAUSED
+/* =========================================================
+   PLAYER STATE
+========================================================= */
+
+function onPlayerStateChange(
+    event
 ) {
+
+    if (
+        event.data ===
+        YT.PlayerState.PLAYING
+    ) {
+
+        updatePlayButtons(
+            true
+        );
+
+
+        setStatus(
+            "Reproduzindo."
+        );
+
+
+        startProgressTimer();
+
+    }
+
+
+    else if (
+        event.data ===
+        YT.PlayerState.PAUSED
+    ) {
+
+        updatePlayButtons(
+            false
+        );
+
+
+        setStatus(
+            "Pausado."
+        );
+
+    }
+
+
+    else if (
+        event.data ===
+        YT.PlayerState.ENDED
+    ) {
+
+        updatePlayButtons(
+            false
+        );
+
+
+        nextTrack();
+
+    }
+
+
+    else if (
+        event.data ===
+        YT.PlayerState.BUFFERING
+    ) {
+
+        setStatus(
+            "Carregando..."
+        );
+
+    }
+
+
+    updateProgress();
+
+}
+
+
+/* =========================================================
+   PLAYER ERROR
+========================================================= */
+
+function onPlayerError(
+    event
+) {
+
+    console.error(
+        "YouTube Player Error:",
+        event.data
+    );
+
+
+    const messages = {
+
+        2:
+            "ID do vídeo inválido.",
+
+        5:
+            "Erro no player do YouTube.",
+
+        100:
+            "Vídeo não encontrado.",
+
+        101:
+            "Este vídeo não permite reprodução incorporada.",
+
+        150:
+            "Este vídeo não permite reprodução incorporada."
+
+    };
+
+
+    setStatus(
+        messages[event.data] ||
+        "Não foi possível reproduzir este vídeo."
+    );
+
 
     updatePlayButtons(
         false
     );
 
-
-    setStatus(
-        "Pausado."
-    );
-
 }
 
-
-else if (
-    event.data ===
-    YT.PlayerState.ENDED
-) {
-
-    updatePlayButtons(
-        false
-    );
-
-
-    nextTrack();
-
-}
-
-
-else if (
-    event.data ===
-    YT.PlayerState.BUFFERING
-) {
-
-    setStatus(
-        "Carregando..."
-    );
-
-}
-
-
-updateProgress();
-
-}
 
 /* =========================================================
-PLAYER ERROR
+   EVENTS
 ========================================================= */
-
-function onPlayerError(event) {
-
-console.error(
-    "YouTube Player Error:",
-    event.data
-);
-
-
-const messages = {
-
-    2:
-        "ID do vídeo inválido.",
-
-    5:
-        "Erro no player HTML5.",
-
-    100:
-        "Vídeo não encontrado ou privado.",
-
-    101:
-        "Este vídeo não permite reprodução incorporada.",
-
-    150:
-        "Este vídeo não permite reprodução incorporada."
-
-};
-
-
-setStatus(
-    messages[event.data] ||
-    "Não foi possível reproduzir este vídeo."
-);
-
-}
-
-/* =========================================================
-EVENTS
-========================================================= */
-
-if (addButton) {
 
 addButton.addEventListener(
     "click",
@@ -1635,9 +1637,6 @@ addButton.addEventListener(
     }
 );
 
-}
-
-if (youtubeInput) {
 
 youtubeInput.addEventListener(
     "keydown",
@@ -1659,86 +1658,53 @@ youtubeInput.addEventListener(
     }
 );
 
-}
-
-if (playButton) {
 
 playButton.addEventListener(
     "click",
     togglePlay
 );
 
-}
-
-if (coverPlayButton) {
 
 coverPlayButton.addEventListener(
     "click",
     togglePlay
 );
 
-}
-
-if (nextButton) {
 
 nextButton.addEventListener(
     "click",
     nextTrack
 );
 
-}
-
-if (prevButton) {
 
 prevButton.addEventListener(
     "click",
     previousTrack
 );
 
-}
-
-if (queueButton) {
 
 queueButton.addEventListener(
     "click",
     () => {
 
-        if (!queuePanel) {
-
-            return;
-
-        }
-
-
-        queuePanel.classList.toggle(
-            "visible"
-        );
+        const visible =
+            queuePanel.classList.toggle(
+                "visible"
+            );
 
 
         queuePanel.setAttribute(
             "aria-hidden",
-            !queuePanel.classList.contains(
-                "visible"
-            )
+            String(!visible)
         );
 
     }
 );
 
-}
-
-if (closeQueue) {
 
 closeQueue.addEventListener(
     "click",
     () => {
-
-        if (!queuePanel) {
-
-            return;
-
-        }
-
 
         queuePanel.classList.remove(
             "visible"
@@ -1753,18 +1719,28 @@ closeQueue.addEventListener(
     }
 );
 
-}
 
 /* =========================================================
-INITIAL
+   INITIAL
 ========================================================= */
 
 updatePlayButtons(
-false
+    false
 );
+
 
 renderQueue();
 
+
+setStatus(
+    "Aguardando link."
+);
+
+
+/* =========================================================
+   DEBUG
+========================================================= */
+
 console.log(
-"ApolloMusic inicializado."
+    "ApolloMusic iniciado."
 );
