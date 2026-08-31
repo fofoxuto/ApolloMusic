@@ -29,7 +29,8 @@ let youtubeApiPromise = null;
 
 let progressTimer = null;
 let changingTrack = false;
-let autoplayBlocked = false;
+
+let activeYouTubePlaylist = null;
 
 
 /* =========================================================
@@ -73,7 +74,6 @@ function cacheElements() {
         queuePanel: "queuePanel",
         closeQueue: "closeQueue",
         queueList: "queueList"
-
     };
 
 
@@ -333,15 +333,239 @@ async function checkAPI() {
 
 
 /* =========================================================
+   YOUTUBE URL
+========================================================= */
+
+/*
+ * Reconhece:
+ *
+ * https://www.youtube.com/watch?v=VIDEO
+ * https://youtu.be/VIDEO
+ * https://music.youtube.com/watch?v=VIDEO
+ *
+ * https://www.youtube.com/playlist?list=PLAYLIST
+ * https://music.youtube.com/playlist?list=PLAYLIST
+ *
+ * E também:
+ *
+ * https://www.youtube.com/watch?v=VIDEO&list=PLAYLIST
+ */
+
+function parseYouTubeUrl(url) {
+
+    try {
+
+        const parsed =
+            new URL(url);
+
+
+        const hostname =
+            parsed.hostname
+                .toLowerCase()
+                .replace(/^www\./, "");
+
+
+        const isYouTube =
+            hostname === "youtube.com" ||
+            hostname === "youtu.be" ||
+            hostname === "music.youtube.com";
+
+
+        if (!isYouTube) {
+
+            return null;
+        }
+
+
+        let videoId =
+            null;
+
+        let playlistId =
+            parsed.searchParams.get("list") ||
+            null;
+
+
+        /*
+         * YouTube normal / YouTube Music
+         */
+
+        if (
+            hostname === "youtube.com" ||
+            hostname === "music.youtube.com"
+        ) {
+
+            if (
+                parsed.pathname === "/watch"
+            ) {
+
+                videoId =
+                    parsed.searchParams.get("v");
+
+            }
+
+
+            /*
+             * /shorts/VIDEO
+             */
+
+            else if (
+                parsed.pathname.startsWith(
+                    "/shorts/"
+                )
+            ) {
+
+                videoId =
+                    parsed.pathname
+                        .split("/")[2] ||
+                    null;
+
+            }
+
+
+            /*
+             * /embed/VIDEO
+             */
+
+            else if (
+                parsed.pathname.startsWith(
+                    "/embed/"
+                )
+            ) {
+
+                videoId =
+                    parsed.pathname
+                        .split("/")[2] ||
+                    null;
+            }
+        }
+
+
+        /*
+         * youtu.be/VIDEO
+         */
+
+        else if (
+            hostname === "youtu.be"
+        ) {
+
+            videoId =
+                parsed.pathname
+                    .split("/")
+                    .filter(Boolean)[0] ||
+                null;
+        }
+
+
+        /*
+         * Se for playlist pura:
+         *
+         * /playlist?list=PL...
+         */
+
+        const isPlaylistPage =
+            parsed.pathname ===
+            "/playlist";
+
+
+        if (
+            isPlaylistPage &&
+            playlistId
+        ) {
+
+            videoId =
+                null;
+        }
+
+
+        /*
+         * Validação simples dos IDs.
+         */
+
+        if (
+            videoId
+        ) {
+
+            videoId =
+                videoId
+                    .replace(/[^a-zA-Z0-9_-]/g, "")
+                    .slice(0, 20);
+        }
+
+
+        if (
+            playlistId
+        ) {
+
+            playlistId =
+                playlistId
+                    .replace(/[^a-zA-Z0-9_-]/g, "")
+                    .slice(0, 100);
+        }
+
+
+        if (
+            !videoId &&
+            !playlistId
+        ) {
+
+            return null;
+        }
+
+
+        return {
+
+            videoId:
+                videoId || null,
+
+            playlistId:
+                playlistId || null,
+
+            isPlaylist:
+                Boolean(playlistId),
+
+            isPlaylistPage
+        };
+
+    } catch {
+
+        return null;
+    }
+}
+
+
+/* =========================================================
+   EXTRAI PLAYLIST ID
+========================================================= */
+
+function extractPlaylistId(url) {
+
+    return (
+        parseYouTubeUrl(url)
+            ?.playlistId ||
+        null
+    );
+}
+
+
+/* =========================================================
+   EXTRAI VIDEO ID
+========================================================= */
+
+function extractVideoId(url) {
+
+    return (
+        parseYouTubeUrl(url)
+            ?.videoId ||
+        null
+    );
+}
+
+
+/* =========================================================
    YOUTUBE IFRAME API
 ========================================================= */
 
 function loadYouTubeAPI() {
-
-    /*
-     * Se já carregou, não precisamos
-     * fazer absolutamente nada.
-     */
 
     if (
         window.YT &&
@@ -355,12 +579,9 @@ function loadYouTubeAPI() {
     }
 
 
-    /*
-     * Evita carregar a API duas vezes
-     * caso init() seja chamado novamente.
-     */
-
-    if (youtubeApiPromise) {
+    if (
+        youtubeApiPromise
+    ) {
 
         return youtubeApiPromise;
     }
@@ -369,12 +590,6 @@ function loadYouTubeAPI() {
     youtubeApiPromise =
         new Promise(
             (resolve, reject) => {
-
-                /*
-                 * Guarda callback anterior,
-                 * caso alguma outra parte da
-                 * página tenha definido um.
-                 */
 
                 const previousCallback =
                     window.onYouTubeIframeAPIReady;
@@ -410,18 +625,15 @@ function loadYouTubeAPI() {
                     };
 
 
-                /*
-                 * Se o script já existe,
-                 * apenas esperamos o callback.
-                 */
-
                 const existingScript =
                     document.querySelector(
                         'script[src="https://www.youtube.com/iframe_api"]'
                     );
 
 
-                if (existingScript) {
+                if (
+                    existingScript
+                ) {
 
                     return;
                 }
@@ -468,7 +680,7 @@ function loadYouTubeAPI() {
 
 
 /* =========================================================
-   CRIA / RECRIA PLAYER
+   CRIA PLAYER
 ========================================================= */
 
 async function createYouTubePlayer(
@@ -504,10 +716,12 @@ async function createYouTubePlayer(
 
 
     /*
-     * Remove player antigo.
+     * Destrói o player anterior.
      */
 
-    if (youtubePlayer) {
+    if (
+        youtubePlayer
+    ) {
 
         try {
 
@@ -531,11 +745,6 @@ async function createYouTubePlayer(
         "";
 
 
-    /*
-     * A API transforma este elemento
-     * no iframe do YouTube.
-     */
-
     const playerElement =
         document.createElement(
             "div"
@@ -549,6 +758,10 @@ async function createYouTubePlayer(
     container.appendChild(
         playerElement
     );
+
+
+    activeYouTubePlaylist =
+        playlistId || null;
 
 
     return new Promise(
@@ -590,10 +803,6 @@ async function createYouTubePlayer(
 
                 events: {
 
-                    /* -------------------------------------
-                       PLAYER PRONTO
-                    ------------------------------------- */
-
                     onReady:
                         event => {
 
@@ -602,9 +811,11 @@ async function createYouTubePlayer(
 
 
                             /*
-                             * Se for playlist,
-                             * carregamos SOMENTE agora,
-                             * quando o player já está pronto.
+                             * Playlist.
+                             *
+                             * O ID é passado
+                             * diretamente para
+                             * a IFrame API.
                              */
 
                             if (
@@ -623,11 +834,14 @@ async function createYouTubePlayer(
                                         0
                                 });
 
+
                                 setStatus(
                                     "Playlist carregada."
                                 );
+                            }
 
-                            } else if (
+
+                            else if (
                                 videoId
                             ) {
 
@@ -654,17 +868,9 @@ async function createYouTubePlayer(
                         },
 
 
-                    /* -------------------------------------
-                       ESTADO
-                    ------------------------------------- */
-
                     onStateChange:
                         handlePlayerStateChange,
 
-
-                    /* -------------------------------------
-                       ERROS
-                    ------------------------------------- */
 
                     onError:
                         event => {
@@ -673,12 +879,6 @@ async function createYouTubePlayer(
                                 event
                             );
 
-
-                            /*
-                             * Não rejeitamos a Promise
-                             * aqui porque o player pode continuar
-                             * existindo após determinados erros.
-                             */
 
                             if (!resolved) {
 
@@ -698,10 +898,6 @@ async function createYouTubePlayer(
 
             /*
              * Vídeo individual.
-             *
-             * Para playlist NÃO passamos videoId,
-             * porque o loadPlaylist() será responsável
-             * por iniciar a playlist.
              */
 
             if (
@@ -741,9 +937,6 @@ function handlePlayerStateChange(
 
         case YT.PlayerState.PLAYING:
 
-            autoplayBlocked =
-                false;
-
             startProgressTimer();
 
             updatePlayButton(
@@ -751,7 +944,9 @@ function handlePlayerStateChange(
             );
 
             setStatus(
-                "Reproduzindo."
+                activeYouTubePlaylist
+                    ? "Reproduzindo playlist."
+                    : "Reproduzindo."
             );
 
             updateProgress();
@@ -805,7 +1000,7 @@ function handlePlayerStateChange(
 
 
 /* =========================================================
-   ERROS DO YOUTUBE
+   ERROS YOUTUBE
 ========================================================= */
 
 function handleYouTubeError(
@@ -833,7 +1028,10 @@ function handleYouTubeError(
             "Este vídeo não permite reprodução incorporada.",
 
         150:
-            "Este vídeo não permite reprodução incorporada."
+            "Este vídeo não permite reprodução incorporada.",
+
+        153:
+            "O YouTube não conseguiu identificar o cliente."
     };
 
 
@@ -844,24 +1042,22 @@ function handleYouTubeError(
 
 
     /*
-     * Não pulamos automaticamente quando
-     * o erro acontece dentro de uma playlist.
-     *
-     * Primeiro deixamos o próprio YouTube
-     * decidir o próximo item.
+     * Se estiver dentro de uma playlist,
+     * não mexemos na queue principal.
      */
 
-    const current =
-        queue[currentTrack];
-
-
     if (
-        current?.playlistId
+        activeYouTubePlaylist
     ) {
 
         return;
     }
 
+
+    /*
+     * Vídeo individual:
+     * tenta próximo item da queue.
+     */
 
     if (
         queue.length > 1
@@ -871,33 +1067,6 @@ function handleYouTubeError(
             () => nextTrack(),
             900
         );
-    }
-}
-
-
-/* =========================================================
-   EXTRAI ID DE PLAYLIST
-========================================================= */
-
-function extractPlaylistId(
-    url
-) {
-
-    try {
-
-        const parsed =
-            new URL(url);
-
-
-        return (
-            parsed.searchParams.get(
-                "list"
-            ) || null
-        );
-
-    } catch {
-
-        return null;
     }
 }
 
@@ -919,7 +1088,7 @@ async function processYouTubeUrl(
     if (!url) {
 
         setStatus(
-            "Cole um link do YouTube para reproduzir."
+            "Cole um link do YouTube para adicionar."
         );
 
         elements.youtubeSearch?.focus();
@@ -940,89 +1109,59 @@ async function processYouTubeUrl(
     }
 
 
-    setStatus(
-        "Validando link do YouTube..."
-    );
+    /*
+     * Primeiro tentamos reconhecer
+     * a URL diretamente no client-side.
+     */
+
+    const parsed =
+        parseYouTubeUrl(url);
 
 
-    try {
+    if (!parsed) {
 
-        const response =
-            await api(
-                "/api/youtube/process",
-                {
-                    method:
-                        "POST",
+        setStatus(
+            "Esse não parece ser um link válido do YouTube."
+        );
 
-                    body:
-                        JSON.stringify({
-                            url
-                        })
-                }
-            );
+        return;
+    }
 
 
-        if (
-            !response.processed ||
-            (
-                !response.videoId &&
-                !response.playlistId
-            )
-        ) {
+    /*
+     * Playlist:
+     *
+     * NÃO precisamos da API backend
+     * para descobrir o playlistId.
+     *
+     * A IFrame API consegue receber
+     * diretamente o ID.
+     */
 
-            setStatus(
-                "Link do YouTube inválido. Tente novamente."
-            );
-
-            return;
-        }
-
-
-        /*
-         * Se o backend não retornar playlistId,
-         * tentamos descobrir pelo próprio link.
-         */
-
-        const playlistId =
-            response.playlistId ||
-            extractPlaylistId(url);
-
-
-        /*
-         * Se existe playlistId,
-         * tratamos como playlist.
-         */
+    if (
+        parsed.playlistId
+    ) {
 
         const item = {
+
+            type:
+                "playlist",
 
             url,
 
             videoId:
-                playlistId
-                    ? null
-                    : (
-                        response.videoId ||
-                        null
-                    ),
+                parsed.videoId,
 
             playlistId:
-                playlistId,
+                parsed.playlistId,
 
             title:
-                response.title ||
-                (
-                    playlistId
-                        ? "Playlist do YouTube"
-                        : "Vídeo do YouTube"
-                ),
+                "Playlist do YouTube",
 
             thumbnail:
-                response.thumbnail ||
-                (
-                    response.videoId
-                        ? `https://i.ytimg.com/vi/${response.videoId}/hqdefault.jpg`
-                        : ""
-                )
+                parsed.videoId
+                    ? `https://i.ytimg.com/vi/${parsed.videoId}/hqdefault.jpg`
+                    : ""
         };
 
 
@@ -1038,12 +1177,9 @@ async function processYouTubeUrl(
         renderQueue();
 
 
-        /*
-         * Primeiro item:
-         * abre o player.
-         */
-
-        if (wasEmpty) {
+        if (
+            wasEmpty
+        ) {
 
             currentTrack =
                 0;
@@ -1053,7 +1189,129 @@ async function processYouTubeUrl(
         } else {
 
             setStatus(
-                `Adicionado à fila. ${queue.length} itens na fila.`
+                `Playlist adicionada à fila. ${queue.length} itens.`
+            );
+        }
+
+
+        if (
+            elements.youtubeSearch
+        ) {
+
+            elements.youtubeSearch.value =
+                "";
+        }
+
+
+        return;
+    }
+
+
+    /*
+     * Vídeo individual.
+     *
+     * Aqui ainda podemos consultar
+     * o backend para obter metadados,
+     * mas o player não depende disso.
+     */
+
+    setStatus(
+        "Obtendo informações do vídeo..."
+    );
+
+
+    try {
+
+        let metadata = {};
+
+
+        try {
+
+            metadata =
+                await api(
+                    "/api/youtube/process",
+                    {
+                        method:
+                            "POST",
+
+                        body:
+                            JSON.stringify({
+                                url
+                            })
+                    }
+                );
+
+        } catch (error) {
+
+            console.warn(
+                "[ApolloMusic] Metadados:",
+                error
+            );
+        }
+
+
+        const videoId =
+            parsed.videoId ||
+            metadata.videoId;
+
+
+        if (!videoId) {
+
+            setStatus(
+                "Não foi possível identificar o vídeo."
+            );
+
+            return;
+        }
+
+
+        const item = {
+
+            type:
+                "video",
+
+            url,
+
+            videoId,
+
+            playlistId:
+                null,
+
+            title:
+                metadata.title ||
+                "Vídeo do YouTube",
+
+            thumbnail:
+                metadata.thumbnail ||
+                `https://i.ytimg.com/vi/${videoId}/hqdefault.jpg`
+        };
+
+
+        const wasEmpty =
+            queue.length === 0;
+
+
+        queue.push(
+            item
+        );
+
+
+        renderQueue();
+
+
+        if (
+            wasEmpty
+        ) {
+
+            currentTrack =
+                0;
+
+            await playCurrentTrack();
+
+        } else {
+
+            setStatus(
+                `Adicionado à fila. ${queue.length} itens.`
             );
         }
 
@@ -1076,7 +1334,7 @@ async function processYouTubeUrl(
 
         setStatus(
             error.message ||
-            "Erro ao processar o link do YouTube."
+            "Erro ao processar o vídeo."
         );
     }
 }
@@ -1088,7 +1346,10 @@ async function processYouTubeUrl(
 
 async function playCurrentTrack() {
 
-    if (changingTrack) {
+    if (
+        changingTrack
+    ) {
+
         return;
     }
 
@@ -1116,30 +1377,14 @@ async function playCurrentTrack() {
     updateQueueSelection();
 
 
-    if (
+    setStatus(
         track.playlistId
-    ) {
-
-        setStatus(
-            "Carregando playlist..."
-        );
-
-    } else {
-
-        setStatus(
-            "Carregando vídeo..."
-        );
-    }
+            ? "Carregando playlist..."
+            : "Carregando vídeo..."
+    );
 
 
     try {
-
-        /*
-         * Playlist:
-         *
-         * O YouTube IFrame API será responsável
-         * pela reprodução dos vídeos da playlist.
-         */
 
         if (
             track.playlistId
@@ -1192,7 +1437,9 @@ function togglePlay() {
 
     if (!youtubePlayer) {
 
-        if (queue.length) {
+        if (
+            queue.length
+        ) {
 
             playCurrentTrack();
 
@@ -1231,7 +1478,10 @@ function togglePlay() {
 
 function nextTrack() {
 
-    if (!queue.length) {
+    if (
+        !queue.length
+    ) {
+
         return;
     }
 
@@ -1241,9 +1491,10 @@ function nextTrack() {
 
 
     /*
-     * Se o item atual for uma playlist,
-     * o próprio YouTube controla os vídeos
-     * internos dela.
+     * Playlist do YouTube:
+     *
+     * O botão próximo controla
+     * o próximo vídeo DA PLAYLIST.
      */
 
     if (
@@ -1260,7 +1511,7 @@ function nextTrack() {
 
 
     /*
-     * Queue normal do ApolloMusic.
+     * Queue principal.
      */
 
     if (
@@ -1287,7 +1538,10 @@ function nextTrack() {
 
 function previousTrack() {
 
-    if (!queue.length) {
+    if (
+        !queue.length
+    ) {
+
         return;
     }
 
@@ -1297,8 +1551,7 @@ function previousTrack() {
 
 
     /*
-     * Playlist do YouTube:
-     * deixa a API controlar o anterior.
+     * Playlist do YouTube.
      */
 
     if (
@@ -1315,7 +1568,7 @@ function previousTrack() {
 
 
     /*
-     * Queue normal.
+     * Queue principal.
      */
 
     if (
@@ -1342,20 +1595,15 @@ function previousTrack() {
 
 function handleTrackEnded() {
 
-    const current =
-        queue[currentTrack];
-
-
     /*
-     * Se for playlist, não avançamos
-     * manualmente.
+     * Playlist:
      *
-     * O YouTube IFrame API controla
-     * a sequência interna da playlist.
+     * O próprio YouTube controla
+     * a sequência interna.
      */
 
     if (
-        current?.playlistId
+        activeYouTubePlaylist
     ) {
 
         return;
@@ -1385,7 +1633,9 @@ function startProgressTimer() {
 
 function stopProgressTimer() {
 
-    if (progressTimer) {
+    if (
+        progressTimer
+    ) {
 
         clearInterval(
             progressTimer
@@ -1801,12 +2051,15 @@ function renderQueue() {
 
 
 /* =========================================================
-   ATUALIZA ITEM ATUAL
+   ATUALIZA SELEÇÃO
 ========================================================= */
 
 function updateQueueSelection() {
 
-    if (!elements.queueList) {
+    if (
+        !elements.queueList
+    ) {
+
         return;
     }
 
@@ -1835,7 +2088,10 @@ function updateQueueSelection() {
 
 function toggleQueue() {
 
-    if (!elements.queuePanel) {
+    if (
+        !elements.queuePanel
+    ) {
+
         return;
     }
 
@@ -1855,7 +2111,10 @@ function toggleQueue() {
 
 function closeQueue() {
 
-    if (!elements.queuePanel) {
+    if (
+        !elements.queuePanel
+    ) {
+
         return;
     }
 
@@ -1878,9 +2137,9 @@ function closeQueue() {
 
 function setupEvents() {
 
-    /* -----------------------------------------------------
-       ADICIONAR
-    ----------------------------------------------------- */
+    /*
+     * ADICIONAR
+     */
 
     if (
         elements.searchYoutube
@@ -1898,9 +2157,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       ENTER
-    ----------------------------------------------------- */
+    /*
+     * ENTER
+     */
 
     if (
         elements.youtubeSearch
@@ -1926,9 +2185,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       PLAY
-    ----------------------------------------------------- */
+    /*
+     * PLAY
+     */
 
     if (
         elements.play
@@ -1941,9 +2200,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       NEXT
-    ----------------------------------------------------- */
+    /*
+     * NEXT
+     */
 
     if (
         elements.next
@@ -1956,9 +2215,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       PREVIOUS
-    ----------------------------------------------------- */
+    /*
+     * PREVIOUS
+     */
 
     if (
         elements.prev
@@ -1971,9 +2230,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       QUEUE
-    ----------------------------------------------------- */
+    /*
+     * QUEUE
+     */
 
     if (
         elements.queueButton
@@ -1986,9 +2245,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       FECHAR QUEUE
-    ----------------------------------------------------- */
+    /*
+     * FECHAR QUEUE
+     */
 
     if (
         elements.closeQueue
@@ -2001,9 +2260,9 @@ function setupEvents() {
     }
 
 
-    /* -----------------------------------------------------
-       PROGRESSO
-    ----------------------------------------------------- */
+    /*
+     * PROGRESSO
+     */
 
     if (
         elements.progressBar
@@ -2040,7 +2299,7 @@ async function init() {
 
 
     /*
-     * Backend
+     * Backend.
      */
 
     checkAPI()
@@ -2077,7 +2336,7 @@ async function init() {
 
 
     /*
-     * YouTube IFrame API
+     * YouTube IFrame API.
      */
 
     loadYouTubeAPI()
